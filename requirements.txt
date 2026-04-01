@@ -1,0 +1,8 @@
+mss
+pillow
+ollama
+python-dotenv
+SpeechRecognition
+pyaudio
+faster-whisper
+numpy
