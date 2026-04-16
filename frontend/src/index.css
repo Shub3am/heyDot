@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+:root {
+  color: #0a2338;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255, 122, 24, 0.3), transparent 34%),
+    radial-gradient(circle at 86% 16%, rgba(0, 168, 181, 0.26), transparent 32%),
+    radial-gradient(circle at 50% 92%, rgba(249, 65, 68, 0.22), transparent 28%),
+    linear-gradient(155deg, #fff7ed 0%, #ecfeff 52%, #f7f7ff 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  color: #0a2338;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: #081f32;
+}
+
+p {
+  margin: 0;
+}
