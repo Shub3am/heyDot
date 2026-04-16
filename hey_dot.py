@@ -18,9 +18,9 @@ import subprocess
 # Load environment variables
 load_dotenv()
 
-# moondream is the fastest VL model in Ollama (1.8B, purpose-built for speed).
-# Pull it with: ollama pull moondream
-MODEL = os.environ.get("OLLAMA_MODEL", "moondream")
+# qwen3-vl:4b — reliable VL model with fast no-think mode (~1-2s on Apple Silicon).
+# Pull it with: ollama pull qwen3-vl:4b
+MODEL = os.environ.get("OLLAMA_MODEL", "qwen3-vl:4b")
 
 # Local Whisper model for fully offline STT (no internet required).
 # Uses Apple CPU with int8 quantisation — fast on Apple Silicon.
@@ -152,37 +152,47 @@ class HelioOverlay:
             try:
                 started_at = time.time()
 
-                # Use pre-captured screen if available, otherwise capture now.
+                # Always capture screen for visual context.
                 image_bytes = self._prefetched_screen
                 self._prefetched_screen = None
                 if image_bytes is None:
                     self.update_ui("Capturing Screen", "Extracting visual context...", "#ffd60a")
                     image_bytes = self.capture_screen()
+                if image_bytes is None:
+                    image_bytes = self.capture_screen()  # one more try
 
-                prompt = (
-                    f"You are Dot, an intelligent desktop voice assistant.\n"
-                    f"You can see the user's current screen.\n"
-                    f"The user asked: '{query}'\n\n"
-                    f"Keep your response strictly conversational, concise, and directly address the user in 1-2 short sentences.\n"
-                    f"Do NOT use markdown or special characters formatting. Your response will be directly read aloud."
-                )
+                system_msg = {
+                    "role": "system",
+                    "content": (
+                        "You are Dot, a concise desktop assistant that can see the user's screen in real time. "
+                        "You directly observe what is on the screen — never say 'screenshot', 'image', or 'attached'. "
+                        "Speak as if you are naturally looking at their screen alongside them. "
+                        "Reply in 1-2 short spoken sentences. Do NOT use markdown, bullet points, or any formatting."
+                    ),
+                }
+                user_msg = {
+                    "role": "user",
+                    "content": query,
+                    "images": [image_bytes] if image_bytes else [],
+                }
+
+                # Assistant prefill with empty think block disables chain-of-thought → fast response.
                 self.update_ui("Dot is Thinking", "Generating response...", "#ffd60a")
-                response = ollama.generate(
+                response = ollama.chat(
                     model=MODEL,
-                    prompt=prompt,
-                    images=[image_bytes] if image_bytes else None,
+                    messages=[
+                        system_msg,
+                        user_msg,
+                        {"role": "assistant", "content": "<think>\n\n</think>\n\n"},
+                    ],
                     keep_alive="30m",
                     options={
                         "temperature": 0.2,
-                        "num_predict": 64,
+                        "num_predict": 120,
                     },
                 )
 
-                answer = ""
-                if hasattr(response, "response"):
-                    answer = (response.response or "").strip()
-                elif isinstance(response, dict):
-                    answer = str(response.get("response", "")).strip()
+                answer = (response.message.content or "").strip()
 
                 if not answer:
                     answer = "I could not generate a response right now. Please try again."
