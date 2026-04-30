@@ -55,3 +55,31 @@ fn file_names_are_unique_within_each_model() {
         assert_eq!(names.len(), model.files.len(), "{}", model.id);
     }
 }
+
+#[tokio::test]
+#[ignore = "network: asks every catalog URL for one byte and checks the file's total size"]
+async fn every_catalog_url_serves_the_catalog_size() {
+    let client = reqwest::Client::new();
+    for model in CATALOG {
+        for file in model.files {
+            let response = client
+                .get(file.url)
+                .header(reqwest::header::RANGE, "bytes=0-0")
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(
+                response.status(),
+                reqwest::StatusCode::PARTIAL_CONTENT,
+                "{}",
+                file.url
+            );
+            assert_eq!(
+                response.headers()[reqwest::header::CONTENT_RANGE],
+                format!("bytes 0-0/{}", file.bytes).as_str(),
+                "{}",
+                file.url
+            );
+        }
+    }
+}
