@@ -150,8 +150,11 @@ async fn fetch_into_partial_file(
         written_bytes += chunk.len() as u64;
         on_file_progress(written_bytes);
     }
-    // tokio hands writes to a background thread; flush waits for them before the file is hashed.
+    // tokio hands writes to a background thread; flush waits for them and reports their errors,
+    // which tokio's sync_all would swallow. sync_all then puts the bytes on disk (F_FULLFSYNC on
+    // macOS) so a power loss after the rename cannot leave an installed file with lost data.
     partial_file.flush().await?;
+    partial_file.sync_all().await?;
     Ok(())
 }
 
