@@ -13,12 +13,11 @@ Not in Phase 1: wake word, Ollama/LM Studio detection, Anthropic native API, mod
 | Item | Detail |
 |---|---|
 | Safety point | Tag `v0-hackathon` on `58f4239`, work on branch `rebuild` (done) |
-| License | `LICENSE` = AGPL-3.0 full text. `COMMERCIAL.md`: how to get a commercial license (contact, what it grants). `CLA.md`: contributor grants the maintainer the right to relicense, required for dual licensing. `.github/workflows/cla.yml` using CLA Assistant Lite (needs you to create the signatures branch; I will not enable anything on GitHub without asking) |
-| Community | `CONTRIBUTING.md` (setup, commit style, CLA), `SECURITY.md` (private report via GitHub advisories), `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1) |
+| License | `LICENSE` = Apache-2.0 full text. Contribution docs, CLA and any dual licensing are deferred to a later phase |
 | Layout | `git mv frontend site`; `app/` Tauri 2 scaffold (React + TS + Vite); `crates/` Cargo workspace rooted at repo `Cargo.toml` including `app/src-tauri` |
 | Docs | Root `AGENTS.md` routing file (<60 lines); README rewritten for the new product (legacy prototype mentioned as tag `v0-hackathon`) |
-| CI | `.github/workflows/ci.yml` on PR + push to `rebuild`/`main`, macos-latest: `cargo fmt --check`, `cargo clippy --workspace -- -D warnings`, `cargo test --workspace`, `pnpm -C app tsc --noEmit`, `pnpm -C app vitest run`, `pnpm -C app tauri build --target universal-apple-darwin` uploaded as an artifact |
-| Toolchain pins | `rust-toolchain.toml` (stable, pinned minor), `app/package.json` `packageManager: pnpm@12` |
+| CI | `.github/workflows/ci.yml` on PR + push to `rebuild`/`main`, macos-latest: `pnpm -C app build` (runs `tsc`, and must precede cargo because `generate_context!` reads `app/dist`), `pnpm -C app test` (`vitest run`), `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, `pnpm -C app tauri build --target universal-apple-darwin --bundles app,dmg` uploaded as an artifact |
+| Toolchain pins | `rust-toolchain.toml` (stable, pinned minor), `app/package.json` `packageManager: pnpm@12.5.1` |
 
 ## Phase 1: modules
 
@@ -68,7 +67,7 @@ Each crate gets an `AGENTS.md` (owns, must not know about, entry points, invaria
 - Kokoro-82M ONNX; text deltas buffered and split at sentence boundaries; each sentence synthesized and queued to `rodio` playback so speech starts after the first sentence.
 - `stop()` clears the queue and halts playback within one audio buffer (barge-in: hotkey press, Esc, or a new question).
 - Fallback while Kokoro is downloading: macOS `AVSpeechSynthesizer` via objc2.
-- **Risk to resolve first in the plan:** Kokoro's phonemizer commonly relies on espeak-ng (GPL-3). GPL is compatible with AGPL but would block the commercial license. The plan's first TTS step picks a non-GPL G2P (e.g. misaki-style lexicon + rules) or, if none is good enough, we decide together.
+- **Risk to resolve first in the plan:** Kokoro's phonemizer commonly relies on espeak-ng (GPL-3). Linking it would put GPL obligations on the distributed Apache-2.0 app and block a later license change. The plan's first TTS step picks a non-GPL G2P (e.g. misaki-style lexicon + rules) or, if none is good enough, we decide together.
 
 ### dot-settings: settings file and secrets
 - TOML at `~/Library/Application Support/Hey Dot/settings.toml`, typed struct with defaults, versioned for migration.
