@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, rebuild]
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: app/package.json
+          cache: true
+          cache_dependency_path: app/pnpm-lock.yaml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm -C app install --frozen-lockfile
+      # tauri::generate_context! needs app/dist to exist before any cargo command
+      - run: pnpm -C app build
+      - run: pnpm -C app test
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  build:
+    needs: check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: app/package.json
+          cache: true
+          cache_dependency_path: app/pnpm-lock.yaml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm -C app install --frozen-lockfile
+      - run: pnpm -C app tauri build --target universal-apple-darwin --bundles app,dmg
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hey-dot-macos-universal
+          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
