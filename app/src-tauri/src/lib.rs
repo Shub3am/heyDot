@@ -9,14 +9,25 @@ use tauri::{Manager, RunEvent};
 
 use crate::local_model::{LocalModel, LocalModelPaths, pick_local_model};
 
+fn http_client_builder() -> reqwest::ClientBuilder {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .read_timeout(Duration::from_secs(60))
+}
+
+/// The client for the bundled llama-server, which listens on this Mac's loopback only.
+/// reqwest follows the system and env proxy by default; a proxy cannot reach this loopback
+/// and would see the API key and every prompt. Downloads keep the proxy.
+pub fn local_model_http_client() -> reqwest::Result<reqwest::Client> {
+    http_client_builder().no_proxy().build()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let http = reqwest::Client::builder()
-                .connect_timeout(Duration::from_secs(10))
-                .read_timeout(Duration::from_secs(60))
-                .build()?;
+            let download_http = http_client_builder().build()?;
+            let local_model_http = local_model_http_client()?;
             let log_dir = app.path().home_dir()?.join("Library/Logs/Hey Dot");
             std::fs::create_dir_all(&log_dir)?;
             let paths = LocalModelPaths {
@@ -26,8 +37,8 @@ pub fn run() {
                 log_file: log_dir.join("llama-server.log"),
             };
             let model = pick_local_model(&recommend(&detect_hardware()));
-            let local_model = Arc::new(LocalModel::new(model, paths, http.clone()));
-            app.manage(http);
+            let local_model = Arc::new(LocalModel::new(model, paths, download_http));
+            app.manage(local_model_http);
             app.manage(Arc::clone(&local_model));
             tauri::async_runtime::spawn(async move { local_model.start_if_installed().await });
             Ok(())
