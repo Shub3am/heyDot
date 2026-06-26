@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["app/src-tauri"]
+members = ["app/src-tauri", "crates/*"]
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

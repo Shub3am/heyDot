@@ -5,6 +5,7 @@ Local-first voice and screen assistant for macOS (Windows later). Rust core, Tau
 ## Modules
 
 - `app/`: Tauri app, windows and UI. See `app/AGENTS.md`.
+- `crates/dot-settings/`: settings file and API keys. See `crates/dot-settings/AGENTS.md`.
 - `site/`: marketing landing page (Vite + React, deployed on Vercel from `site/`). Independent of the app.
 - `docs/specs/`, `docs/plans/`: design specs and implementation plans per phase.
 - `hey_dot.py`, `requirements.txt`: hackathon prototype, kept until Phase 1 reaches parity, then deleted. Tag `v0-hackathon` preserves it.
