@@ -46,7 +46,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::watch_local_model,
             commands::download_local_model,
-            commands::ask_text
+            commands::ask_text,
+            commands::open_screen_recording_settings
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

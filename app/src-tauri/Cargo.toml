@@ -21,6 +21,8 @@ serde_json = "1"
 dot-models = { path = "../../crates/dot-models" }
 dot-providers = { path = "../../crates/dot-providers" }
 dot-runtime = { path = "../../crates/dot-runtime" }
+dot-screen = { path = "../../crates/dot-screen" }
+dot-settings = { path = "../../crates/dot-settings" }
 futures-util = "0.3.34"
 reqwest = "0.13.5"
 tokio = { version = "1.53.1", features = ["sync"] }
