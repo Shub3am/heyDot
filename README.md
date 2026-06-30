@@ -13,7 +13,7 @@ A local-first voice and screen assistant for your Mac. Ask about what is on your
 
 ## Develop
 
-Requirements: macOS, Rust (via rustup; the pinned version installs itself), Node 26, pnpm 12.
+Requirements: macOS 14 or later, Rust (via rustup; the pinned version installs itself), Node 26, pnpm 12.
 
     pnpm -C app install
     pnpm -C app tauri dev
