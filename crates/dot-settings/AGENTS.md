@@ -1,10 +1,10 @@
 # dot-settings
 
-Owns: the user settings file (typed `Settings`, defaults, TOML load and save, format version).
+Owns: the user settings file (typed `Settings`, defaults, TOML load and save, format version) and cloud API keys in the macOS Keychain.
 
-Must not know about: the UI, models, providers, or where the file lives. The caller passes the path; the app uses `~/Library/Application Support/Hey Dot/settings.toml`.
+Must not know about: the UI, models, providers, or where the file lives. The caller passes the path; the app uses `~/Library/Application Support/Hey Dot/settings.toml`. Provider ids are opaque strings chosen by the caller.
 
-Entry points: `load_settings(path)`, `save_settings(path, &settings)`, `Settings::default()`.
+Entry points: `load_settings(path)`, `save_settings(path, &settings)`, `Settings::default()`; `use_macos_keychain()` once at app start, then `save_api_key` and `read_api_key`.
 
 Invariants and gotchas:
 - A missing file loads defaults and writes nothing. Saving is the caller's decision.
@@ -13,5 +13,7 @@ Invariants and gotchas:
 - Unknown keys are ignored so an older build can read a newer file; saving from the older build drops those keys.
 - Saves go through `settings.toml.tmp` and a rename, so a crash never leaves a half-written file.
 - Hotkey strings use the global-hotkey format (`Alt+Space`); validation happens where the shortcut is registered.
+- API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
+- The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised in CI.
 
 Called by: `app/src-tauri` (from Phase 1 step 3 on).
