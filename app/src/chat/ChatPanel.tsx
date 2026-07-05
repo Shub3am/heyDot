@@ -2,7 +2,14 @@
 // Must not call invoke directly; every backend call goes through ./ipc.
 
 import { useEffect, useState } from "react";
-import { askText, downloadLocalModel, watchLocalModel, type LocalModelStatus } from "./ipc";
+import {
+  askText,
+  downloadLocalModel,
+  openScreenRecordingSettings,
+  watchLocalModel,
+  type LocalModelStatus,
+  type ScreenShare,
+} from "./ipc";
 
 const SERVER_LOG_PATH = "~/Library/Logs/Hey Dot/llama-server.log";
 
@@ -10,6 +17,7 @@ type Answer = {
   question: string;
   text: string;
   badge: string | null;
+  screen: ScreenShare | null;
   error: string | null;
 };
 
@@ -52,6 +60,23 @@ function describeModel(status: LocalModelStatus | null) {
   }
 }
 
+function describeScreenShare(screen: ScreenShare) {
+  switch (screen.kind) {
+    case "attached":
+      return <p>With a screenshot of this screen</p>;
+    case "permissionNeeded":
+      return (
+        <p role="status">
+          Answered without a screenshot: Hey Dot needs Screen Recording permission. Turn on Hey Dot in System
+          Settings, then quit and reopen Hey Dot.{" "}
+          <button onClick={() => void openScreenRecordingSettings()}>Open Screen Recording settings</button>
+        </p>
+      );
+    case "failed":
+      return <p role="status">Answered without a screenshot: {screen.reason}</p>;
+  }
+}
+
 export default function ChatPanel() {
   const [status, setStatus] = useState<LocalModelStatus | null>(null);
   const [question, setQuestion] = useState("");
@@ -65,14 +90,14 @@ export default function ChatPanel() {
   async function ask() {
     setAsking(true);
     setQuestion("");
-    setAnswer({ question, text: "", badge: null, error: null });
+    setAnswer({ question, text: "", badge: null, screen: null, error: null });
     try {
       await askText(question, (event) =>
         setAnswer((current) => {
           if (current === null) return current;
           if (event.event === "started") {
             const badge = event.data.leavesDevice ? `Sent to ${event.data.host}` : "On this Mac";
-            return { ...current, badge };
+            return { ...current, badge, screen: event.data.screen };
           }
           return { ...current, text: current.text + event.data.text };
         }),
@@ -100,6 +125,7 @@ export default function ChatPanel() {
         <article>
           <p>{answer.question}</p>
           {answer.badge && <p>{answer.badge}</p>}
+          {answer.screen && describeScreenShare(answer.screen)}
           <p style={{ whiteSpace: "pre-wrap" }}>{answer.text}</p>
           {answer.error && <p role="alert">{answer.error}</p>}
         </article>
