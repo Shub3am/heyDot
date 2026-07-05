@@ -2,6 +2,7 @@
 //! Must not run models, read settings, know about the UI, or decide where models are stored.
 
 mod catalog;
+mod download;
 mod hardware;
 mod recommend;
 
@@ -9,5 +10,6 @@ pub use catalog::{
     CATALOG, Model, ModelFile, PARAKEET_TDT_V3, QWEN3_VL_2B, QWEN3_VL_4B, QWEN3_VL_8B,
     SILERO_VAD_V6,
 };
+pub use download::{DownloadError, DownloadProgress, download_model};
 pub use hardware::{Chip, Hardware, detect_hardware};
 pub use recommend::{ModelChoice, Recommendation, recommend};

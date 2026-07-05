@@ -7,3 +7,15 @@ publish = false
 
 [dependencies]
 sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
+futures-util = "0.3.34"
+hex = "0.4.3"
+reqwest = { version = "0.13.5", features = ["stream"] }
+sha2 = "0.11.0"
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["fs", "io-util", "rt"] }
+
+[dev-dependencies]
+axum = "0.8.9"
+tempfile = "3.27.0"
+tokio = { version = "1.53.1", features = ["macros", "net", "rt-multi-thread"] }
+tower-http = { version = "0.7.1", features = ["fs"] }

@@ -23,6 +23,7 @@ Local-first voice and screen assistant for macOS (Windows later). Rust core, Tau
     cargo fmt --all --check
     cargo clippy --workspace --all-targets -- -D warnings
     cargo test --workspace
+    cargo test --workspace -- --ignored   # network and model-dependent checks, not run in CI
 
 ## Build
 
