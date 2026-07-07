@@ -2,7 +2,7 @@
 //! Must not hold secrets (API keys live in the Keychain) and must not decide where the
 //! file lives; callers pass the path.
 
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -79,9 +79,12 @@ pub fn save_settings(settings_path: &Path, settings: &Settings) -> Result<(), Se
     if let Some(settings_dir) = settings_path.parent() {
         std::fs::create_dir_all(settings_dir)?;
     }
-    // Write beside the target and rename, so a crash mid-write never leaves a truncated file.
+    // Write beside the target, sync, then rename, so neither a crash nor a power loss leaves a
+    // truncated or empty file (an empty file would silently load as all defaults).
     let staging_path = settings_path.with_extension("toml.tmp");
-    std::fs::write(&staging_path, settings_toml)?;
+    let mut staging_file = std::fs::File::create(&staging_path)?;
+    staging_file.write_all(settings_toml.as_bytes())?;
+    staging_file.sync_all()?;
     std::fs::rename(&staging_path, settings_path)?;
     Ok(())
 }
