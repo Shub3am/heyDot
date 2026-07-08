@@ -11,7 +11,7 @@ Invariants and gotchas:
 - A file that fails to parse, or has a `version` above `CURRENT_SETTINGS_VERSION`, is an error and is never rewritten by this crate. A caller that saves defaults after that error destroys the user's file; show the error instead.
 - Adding a field needs no version bump: every field has a default. Bump the version only when a field changes meaning or type, and add the migration in `load_settings` in the same commit.
 - Unknown keys are ignored so an older build can read a newer file; saving from the older build drops those keys.
-- Saves go through `settings.toml.tmp` and a rename, so a crash never leaves a half-written file.
+- Saves go through `settings.toml.tmp`, an fsync and a rename, so a crash or power loss never leaves a half-written file.
 - Hotkey strings use the global-hotkey format (`Alt+Space`); validation happens where the shortcut is registered.
 - API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
 - The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised in CI.
