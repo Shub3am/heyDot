@@ -7,7 +7,7 @@ Must not know about: settings, the UI, Tauri, llama-server or any inference. It 
 Entry points: `CATALOG` and the per-model statics (`QWEN3_VL_4B`, `PARAKEET_TDT_V3`, ...); `detect_hardware()` then `recommend(&hardware)`; `download_model(&client, &model, models_dir, on_progress)`.
 
 Invariants and gotchas:
-- A file exists at `<models_dir>/<model id>/<file name>` only after its sha256 matched. Anything unverified is `<file name>.part`. "The final file exists" therefore means "installed"; nothing re-hashes installed files.
+- A file exists at `<models_dir>/<model id>/<file name>` only after its sha256 matched and its bytes were synced to disk. Anything unverified is `<file name>.part`. "The final file exists" therefore means "installed"; nothing re-hashes installed files.
 - A failed hash deletes the `.part` and returns `HashMismatch`; calling again starts that file from zero.
 - Dropping the `download_model` future cancels it and keeps the `.part`; the next call resumes with a Range request. A server answering 200 instead of 206 restarts the file.
 - One download per model at a time. Two concurrent calls on the same model write the same `.part`; the caller serialises them.
