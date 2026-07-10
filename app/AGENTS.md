@@ -8,7 +8,7 @@ Entry points: `src-tauri/src/main.rs` -> `hey_dot_lib::run()` in `src-tauri/src/
 
 Invariants and gotchas:
 - `tauri::generate_context!` reads `dist/` at compile time, so `pnpm build` must run before `cargo clippy/test/build` on a fresh checkout.
-- Capabilities in `src-tauri/capabilities/` gate every IPC command; a new command needs a permission entry.
+- Commands registered with `invoke_handler` are allowed for every window by default. Capabilities in `src-tauri/capabilities/` gate plugin commands; a new plugin command needs a permission entry there.
 - Bundle identifier `com.shub3am.heydot` is permanent once released; macOS permissions are keyed to it.
 
 Called by: the user (launching the app) and CI (`.github/workflows/ci.yml`).
