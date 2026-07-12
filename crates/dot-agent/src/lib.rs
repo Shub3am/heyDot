@@ -2,5 +2,6 @@
 //! Must not capture the screen, speak, or know about Tauri, the UI or which model serves the answer.
 
 mod context;
+mod history;
 
 pub use context::UserInput;
