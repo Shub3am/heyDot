@@ -12,8 +12,9 @@ Invariants and gotchas:
 - An answer is complete only when `[DONE]` arrived. A stream that ends without it yields its text so far, then `Unreachable`, so a killed server never looks like a short answer.
 - A chunk carrying `error` ends the stream with `Other` holding that error's JSON. A chunk that does not parse ends it with `Other` holding the raw data.
 - Gemini's OpenAI endpoint answers a bad key with 400 "API key not valid" instead of 401; that maps to `AuthFailed` like 401 and 403.
+- llama-server answers a request longer than its context with 400 and `"type":"exceed_context_size_error"`; that maps to `ContextTooLong` so the caller can offer a new chat.
 - `leaves_device` is false only for `localhost`, `127.0.0.0/8` and `::1`. A LAN address such as `192.168.1.20` leaves the Mac.
 - The caller owns the `reqwest::Client` and its timeouts. With no read timeout a stalled server stalls the stream forever.
 - Tests use wiremock, which pools its servers: a dropped `MockServer` keeps listening and may answer the next test. "Unreachable" tests use a port freed from a `TcpListener`.
 
-Called by: `app/src-tauri` (the `ask_text` command) and `crates/dot-runtime`'s ignored real-model test.
+Called by: `crates/dot-agent` (`Session::ask`), `app/src-tauri` (builds the `ChatConfig` and words `ProviderError` for the panel) and `crates/dot-runtime`'s ignored real-model test.
