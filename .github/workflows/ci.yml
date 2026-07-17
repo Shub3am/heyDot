@@ -10,6 +10,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      - id: llama-server-cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            app/src-tauri/binaries
+            app/src-tauri/licenses
+          key: llama-server-${{ hashFiles('scripts/build-llama-server.sh') }}
+      # tauri-build fails every cargo command on hey-dot while the externalBin or resources are missing
+      - if: steps.llama-server-cache.outputs.cache-hit != 'true'
+        run: scripts/build-llama-server.sh
       - uses: pnpm/action-setup@v6.1.0
         with:
           package_json_file: app/package.json
@@ -32,6 +42,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      - id: llama-server-cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            app/src-tauri/binaries
+            app/src-tauri/licenses
+          key: llama-server-${{ hashFiles('scripts/build-llama-server.sh') }}
+      # tauri-build fails every cargo command on hey-dot while the externalBin or resources are missing
+      - if: steps.llama-server-cache.outputs.cache-hit != 'true'
+        run: scripts/build-llama-server.sh
       - uses: pnpm/action-setup@v6.1.0
         with:
           package_json_file: app/package.json
