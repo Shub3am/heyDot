@@ -39,6 +39,7 @@ pub fn run() {
             let model = pick_local_model(&recommend(&detect_hardware()));
             let local_model = Arc::new(LocalModel::new(model, paths, download_http));
             app.manage(local_model_http);
+            app.manage(dot_agent::Session::default());
             app.manage(Arc::clone(&local_model));
             tauri::async_runtime::spawn(async move { local_model.start_if_installed().await });
             Ok(())
@@ -47,6 +48,7 @@ pub fn run() {
             commands::watch_local_model,
             commands::download_local_model,
             commands::ask_text,
+            commands::new_chat,
             commands::open_screen_recording_settings
         ])
         .build(tauri::generate_context!())
