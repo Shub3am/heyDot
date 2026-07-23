@@ -1,10 +1,11 @@
-// The first chat surface: the local model's state, one typed question and its streamed answer.
+// The first chat surface: a conversation with the local model, typed one question at a time.
 // Must not call invoke directly; every backend call goes through ./ipc.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   askText,
   downloadLocalModel,
+  newChat,
   openScreenRecordingSettings,
   watchLocalModel,
   type LocalModelStatus,
@@ -13,7 +14,8 @@ import {
 
 const SERVER_LOG_PATH = "~/Library/Logs/Hey Dot/llama-server.log";
 
-type Answer = {
+type Turn = {
+  id: number;
   question: string;
   text: string;
   badge: string | null;
@@ -80,40 +82,58 @@ function describeScreenShare(screen: ScreenShare) {
 export default function ChatPanel() {
   const [status, setStatus] = useState<LocalModelStatus | null>(null);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  const [asking, setAsking] = useState(false);
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const nextTurnId = useRef(0);
 
   useEffect(() => {
     void watchLocalModel(setStatus);
   }, []);
 
+  // A turn removed by New chat is not found, so its late events change nothing.
+  function updateTurn(id: number, update: (turn: Turn) => Turn) {
+    setTurns((current) => current.map((turn) => (turn.id === id ? update(turn) : turn)));
+  }
+
   async function ask() {
-    setAsking(true);
+    const id = nextTurnId.current++;
     setQuestion("");
-    setAnswer({ question, text: "", badge: null, screen: null, error: null });
+    setTurns((current) => [...current, { id, question, text: "", badge: null, screen: null, error: null }]);
     try {
-      await askText(question, (event) =>
-        setAnswer((current) => {
-          if (current === null) return current;
-          if (event.event === "started") {
-            const badge = event.data.leavesDevice ? `Sent to ${event.data.host}` : "On this Mac";
-            return { ...current, badge, screen: event.data.screen };
+      await askText(question, (event) => {
+        if (event.event === "started") {
+          const { leavesDevice, host, screen, forgotEarlierTurns } = event.data;
+          if (forgotEarlierTurns) {
+            setTurns((current) => current.filter((turn) => turn.id >= id));
           }
-          return { ...current, text: current.text + event.data.text };
-        }),
-      );
+          updateTurn(id, (turn) => ({ ...turn, badge: leavesDevice ? `Sent to ${host}` : "On this Mac", screen }));
+        } else {
+          updateTurn(id, (turn) => ({ ...turn, text: turn.text + event.data.text }));
+        }
+      });
     } catch (error) {
-      setAnswer((current) => current && { ...current, error: String(error) });
-    } finally {
-      setAsking(false);
+      updateTurn(id, (turn) => ({ ...turn, error: String(error) }));
     }
   }
 
-  const canAsk = status?.phase.kind === "ready" && !asking && question.trim() !== "";
+  function startNewChat() {
+    setTurns([]);
+    void newChat();
+  }
+
+  const canAsk = status?.phase.kind === "ready" && question.trim() !== "";
 
   return (
     <section>
       {describeModel(status)}
+      {turns.map((turn) => (
+        <article key={turn.id}>
+          <p>{turn.question}</p>
+          {turn.badge && <p>{turn.badge}</p>}
+          {turn.screen && describeScreenShare(turn.screen)}
+          <p style={{ whiteSpace: "pre-wrap" }}>{turn.text}</p>
+          {turn.error && <p role="alert">{turn.error}</p>}
+        </article>
+      ))}
       <label>
         Question
         <textarea value={question} onChange={(event) => setQuestion(event.target.value)} />
@@ -121,15 +141,7 @@ export default function ChatPanel() {
       <button disabled={!canAsk} onClick={() => void ask()}>
         Ask
       </button>
-      {answer && (
-        <article>
-          <p>{answer.question}</p>
-          {answer.badge && <p>{answer.badge}</p>}
-          {answer.screen && describeScreenShare(answer.screen)}
-          <p style={{ whiteSpace: "pre-wrap" }}>{answer.text}</p>
-          {answer.error && <p role="alert">{answer.error}</p>}
-        </article>
-      )}
+      <button onClick={startNewChat}>New chat</button>
     </section>
   );
 }

@@ -23,7 +23,10 @@ export type ScreenShare =
   | { kind: "failed"; reason: string };
 
 export type AnswerEvent =
-  | { event: "started"; data: { leavesDevice: boolean; host: string; screen: ScreenShare } }
+  | {
+      event: "started";
+      data: { leavesDevice: boolean; host: string; screen: ScreenShare; forgotEarlierTurns: boolean };
+    }
   | { event: "delta"; data: { text: string } };
 
 export function watchLocalModel(onStatus: (status: LocalModelStatus) => void): Promise<void> {
@@ -34,11 +37,16 @@ export function downloadLocalModel(): Promise<void> {
   return invoke("download_local_model");
 }
 
-/** Rejects with the error text when the answer fails part way. */
+/** Resolves when the answer is complete or a newer question or New chat stopped it; rejects with the error text when it fails. */
 export function askText(question: string, onEvent: (event: AnswerEvent) => void): Promise<void> {
   return invoke("ask_text", { question, onEvent: new Channel(onEvent) });
 }
 
 export function openScreenRecordingSettings(): Promise<void> {
   return invoke("open_screen_recording_settings");
+}
+
+/** Stops the running answer; the next question starts a new chat. */
+export function newChat(): Promise<void> {
+  return invoke("new_chat");
 }
