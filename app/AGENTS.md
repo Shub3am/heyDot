@@ -14,6 +14,7 @@ Invariants and gotchas:
 - The bundled llama-server sits next to the app's executable (`Contents/MacOS/` in the bundle, `target/debug/` in `tauri dev`), which is how `lib.rs` finds it.
 - `RunEvent::Exit` stops llama-server with `block_on`: Tauri ends with `process::exit`, which skips destructors, so `kill_on_drop` alone never fires.
 - The `AnswerEvent` and `LocalModelStatus` serde shapes are a contract with `src/chat/ipc.ts`; the serialization tests in `commands.rs` and `local_model.rs` pin them.
+- Two HTTP clients: downloads follow the system proxy, while `local_model_http_client()` (managed state, used by `ask_text`) skips it so prompts and the llama-server key never reach a proxy. `tests/local_model_http_client.rs` pins it.
 - Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
 - Which local model runs is `pick_local_model(recommend(hardware))` until onboarding lets the user choose.
 
