@@ -940,6 +940,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "dot-screen"
+version = "0.1.0"
+
+[[package]]
 name = "dot-settings"
 version = "0.1.0"
 dependencies = [
