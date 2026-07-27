@@ -12,6 +12,7 @@ use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
 
 use crate::catalog::{Model, ModelFile};
+use crate::installed::model_dir;
 
 /// Progress across all of a model's files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +47,7 @@ pub async fn download_model(
     models_dir: &Path,
     mut on_progress: impl FnMut(DownloadProgress),
 ) -> Result<PathBuf, DownloadError> {
-    let model_dir = models_dir.join(model.id);
+    let model_dir = model_dir(model, models_dir);
     tokio::fs::create_dir_all(&model_dir).await?;
     let total_bytes: u64 = model.files.iter().map(|file| file.bytes).sum();
     let mut finished_bytes = 0;

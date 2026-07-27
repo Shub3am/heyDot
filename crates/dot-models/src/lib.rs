@@ -4,6 +4,7 @@
 mod catalog;
 mod download;
 mod hardware;
+mod installed;
 mod recommend;
 
 pub use catalog::{
@@ -12,4 +13,5 @@ pub use catalog::{
 };
 pub use download::{DownloadError, DownloadProgress, download_model};
 pub use hardware::{Chip, Hardware, detect_hardware};
+pub use installed::{ChatModelFiles, installed_chat_model};
 pub use recommend::{ModelChoice, Recommendation, recommend};
