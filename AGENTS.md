@@ -9,18 +9,21 @@ Local-first voice and screen assistant for macOS (Windows later). Rust core, Tau
 - `crates/dot-models/`: model catalog, hardware recommendation, verified downloads. See `crates/dot-models/AGENTS.md`.
 - `crates/dot-runtime/`: supervised llama-server process. See `crates/dot-runtime/AGENTS.md`.
 - `crates/dot-providers/`: streaming client for OpenAI-compatible chat endpoints. See `crates/dot-providers/AGENTS.md`.
+- `scripts/build-llama-server.sh`: builds the pinned llama-server the app bundles, plus its licenses.
 - `site/`: marketing landing page (Vite + React, deployed on Vercel from `site/`). Independent of the app.
 - `docs/specs/`, `docs/plans/`: design specs and implementation plans per phase.
 - `hey_dot.py`, `requirements.txt`: hackathon prototype, kept until Phase 1 reaches parity, then deleted. Tag `v0-hackathon` preserves it.
 
 ## Run
 
+    scripts/build-llama-server.sh   # once, and after changing it; needs cmake and git
     pnpm -C app install
     pnpm -C app tauri dev
 
 ## Test
 
     pnpm -C app build        # must run before any cargo command: tauri needs app/dist
+                             # and scripts/build-llama-server.sh must have run once
     pnpm -C app test
     cargo fmt --all --check
     cargo clippy --workspace --all-targets -- -D warnings
