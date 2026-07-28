@@ -11,8 +11,10 @@ const JPEG_QUALITY: u8 = 85;
 pub(crate) fn encode_jpeg(rgba: &[u8], width: u32, height: u32) -> Result<Vec<u8>, ScreenError> {
     // The JPEG encoder rejects RGBA outright; a screen has no transparency to lose.
     let rgb: Vec<u8> = rgba
-        .chunks_exact(4)
-        .flat_map(|pixel| [pixel[0], pixel[1], pixel[2]])
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .flat_map(|&[red, green, blue, _alpha]| [red, green, blue])
         .collect();
     let mut jpeg = Vec::new();
     JpegEncoder::new_with_quality(&mut jpeg, JPEG_QUALITY).write_image(
