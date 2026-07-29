@@ -2,6 +2,9 @@
 // Must not call invoke directly; every backend call goes through ./ipc.
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
 import {
   askText,
   downloadLocalModel,
@@ -176,7 +179,9 @@ export default function ChatPanel() {
                 </p>
               )}
               {turn.screen && describeMissingScreenshot(turn.screen)}
-              <p className="answer-text">{turn.text}</p>
+              <div className="answer-text">
+                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{turn.text}</Markdown>
+              </div>
               {turn.error && (
                 <p role="alert" className="error">
                   {turn.error}
