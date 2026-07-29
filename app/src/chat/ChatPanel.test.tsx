@@ -263,3 +263,38 @@ test("a question Hey Dot answers after ten idle minutes hides the turns it forgo
   expect(screen.queryByText("What city is this?")).toBeNull();
   expect(screen.getAllByRole("article")).toHaveLength(1);
 });
+
+test("Enter asks the typed question", async () => {
+  await renderPanel(async (question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: `Answer to ${question}` } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What city is this?");
+  fireEvent.keyDown(screen.getByLabelText("Question"), { key: "Enter" });
+  expect(await screen.findByText("Answer to What city is this?")).toBeTruthy();
+});
+
+test("Shift+Enter starts a new line instead of asking", async () => {
+  await renderPanel();
+  sendPhase({ kind: "ready" });
+  typeQuestion("What city is this?");
+  fireEvent.keyDown(screen.getByLabelText("Question"), { key: "Enter", shiftKey: true });
+  expect(invokedCommands).not.toContain("ask_text");
+});
+
+test("Enter while an input method is composing does not ask", async () => {
+  await renderPanel();
+  sendPhase({ kind: "ready" });
+  typeQuestion("東京");
+  fireEvent.keyDown(screen.getByLabelText("Question"), { key: "Enter", isComposing: true });
+  expect(invokedCommands).not.toContain("ask_text");
+});
+
+test("Enter on an empty question does not ask", async () => {
+  await renderPanel();
+  sendPhase({ kind: "ready" });
+  typeQuestion("   ");
+  fireEvent.keyDown(screen.getByLabelText("Question"), { key: "Enter" });
+  expect(invokedCommands).not.toContain("ask_text");
+});

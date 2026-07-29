@@ -1,7 +1,7 @@
 // The first chat surface: a conversation with the local model, typed one question at a time.
 // Must not call invoke directly; every backend call goes through ./ipc.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   askText,
   downloadLocalModel,
@@ -62,20 +62,24 @@ function describeModel(status: LocalModelStatus | null) {
   }
 }
 
-function describeScreenShare(screen: ScreenShare) {
+function describeMissingScreenshot(screen: ScreenShare) {
   switch (screen.kind) {
     case "attached":
-      return <p>With a screenshot of this screen</p>;
+      return null;
     case "permissionNeeded":
       return (
-        <p role="status">
+        <p role="status" className="notice">
           Answered without a screenshot: Hey Dot needs Screen Recording permission. Turn on Hey Dot in System
           Settings, then quit and reopen Hey Dot.{" "}
           <button onClick={() => void openScreenRecordingSettings()}>Open Screen Recording settings</button>
         </p>
       );
     case "failed":
-      return <p role="status">Answered without a screenshot: {screen.reason}</p>;
+      return (
+        <p role="status" className="notice">
+          Answered without a screenshot: {screen.reason}
+        </p>
+      );
   }
 }
 
@@ -84,10 +88,25 @@ export default function ChatPanel() {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const nextTurnId = useRef(0);
+  const conversation = useRef<HTMLDivElement>(null);
+  const wasScrolledToBottom = useRef(true);
 
   useEffect(() => {
     void watchLocalModel(setStatus);
   }, []);
+
+  // Follows a streaming answer only while the user has not scrolled up to read an earlier one.
+  useLayoutEffect(() => {
+    const element = conversation.current!;
+    if (wasScrolledToBottom.current) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, [turns]);
+
+  function rememberScrollPosition() {
+    const element = conversation.current!;
+    wasScrolledToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+  }
 
   // A turn removed by New chat is not found, so its late events change nothing.
   function updateTurn(id: number, update: (turn: Turn) => Turn) {
@@ -122,26 +141,64 @@ export default function ChatPanel() {
 
   const canAsk = status?.phase.kind === "ready" && question.trim() !== "";
 
+  // Enter while an input method is composing picks a candidate (Japanese, Chinese), so it must not ask.
+  function askOnEnter(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+    event.preventDefault();
+    if (canAsk) {
+      void ask();
+    }
+  }
+
   return (
-    <section>
-      {describeModel(status)}
-      {turns.map((turn) => (
-        <article key={turn.id}>
-          <p>{turn.question}</p>
-          {turn.badge && <p>{turn.badge}</p>}
-          {turn.screen && describeScreenShare(turn.screen)}
-          <p style={{ whiteSpace: "pre-wrap" }}>{turn.text}</p>
-          {turn.error && <p role="alert">{turn.error}</p>}
-        </article>
-      ))}
-      <label>
-        Question
-        <textarea value={question} onChange={(event) => setQuestion(event.target.value)} />
-      </label>
-      <button disabled={!canAsk} onClick={() => void ask()}>
-        Ask
-      </button>
-      <button onClick={startNewChat}>New chat</button>
+    <section className="chat">
+      <header className="chat-header">
+        <div className="model-status" data-phase={status?.phase.kind ?? "checking"}>
+          <h1>Hey Dot</h1>
+          {describeModel(status)}
+        </div>
+        <button className="secondary" onClick={startNewChat}>
+          New chat
+        </button>
+      </header>
+      <div className="conversation" ref={conversation} onScroll={rememberScrollPosition}>
+        {turns.length === 0 && <p className="empty">Ask about anything on your screen.</p>}
+        {turns.map((turn) => (
+          <article key={turn.id} className="turn">
+            <p className="question">{turn.question}</p>
+            <div className="answer">
+              {(turn.badge || turn.screen?.kind === "attached") && (
+                <p className="meta">
+                  {turn.badge && <span>{turn.badge}</span>}
+                  {turn.screen?.kind === "attached" && <span>With a screenshot of this screen</span>}
+                </p>
+              )}
+              {turn.screen && describeMissingScreenshot(turn.screen)}
+              <p className="answer-text">{turn.text}</p>
+              {turn.error && (
+                <p role="alert" className="error">
+                  {turn.error}
+                </p>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      <footer className="composer">
+        <textarea
+          aria-label="Question"
+          placeholder="Ask about your screen..."
+          rows={1}
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={askOnEnter}
+        />
+        <button className="send" aria-label="Ask" disabled={!canAsk} onClick={() => void ask()}>
+          <span aria-hidden="true">↑</span>
+        </button>
+      </footer>
     </section>
   );
 }
