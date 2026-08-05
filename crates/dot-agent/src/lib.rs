@@ -3,5 +3,7 @@
 
 mod context;
 mod history;
+mod session;
 
 pub use context::UserInput;
+pub use session::{AgentEvent, Session};
