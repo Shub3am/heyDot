@@ -2,7 +2,7 @@
 
 Owns: sending one chat request to an OpenAI-compatible `/chat/completions` endpoint and streaming the answer's text back, with the request's image as a JPEG data URI, and turning HTTP and stream failures into `ProviderError`. Also says whether a base URL leaves this Mac (`ChatConfig::leaves_device`).
 
-Must not know about: llama-server, which provider or model sits behind the URL, conversation history, system prompts, settings or the UI. It does not start servers or retry.
+Must not know about: how llama-server is started or run, which provider or model a request is meant for, conversation history, system prompts, settings or the UI. It does not start servers or retry.
 
 Entry points: `stream_chat(&client, &config, &messages)`, a stream of text deltas; `ChatConfig::leaves_device()`.
 
