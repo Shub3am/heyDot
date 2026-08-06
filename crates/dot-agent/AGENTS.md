@@ -12,7 +12,7 @@ Invariants and gotchas:
 - The spec's `Done` is the end of the stream, and its `Error(kind)` is an `Err(ProviderError)` item.
 - "Last 10 turns" counts the new question, so a request carries at most nine earlier turns.
 - Only the new question carries an image. An earlier question that had one ends with "[screenshot from earlier turn]" on its own line. Screenshots are never stored.
-- Ten idle minutes, counted from the last question, forget every turn. The next `Thinking` then says `forgot_earlier_turns: true`, so the UI can drop them too.
+- Ten idle minutes of wall-clock time, counted from the last question and including time the Mac slept, forget every turn. A clock set back counts as no idle time. The next `Thinking` then says `forgot_earlier_turns: true`, so the UI can drop them too.
 - A cancelled answer stays in history with its text so far. A failed answer is discarded. A question with no answer text is forgotten when the next question starts.
 - The history lock is held for a whole answer, so `new_chat` waits until the running answer notices its cancellation. A consumer that stops polling a stream without dropping it blocks every later question.
 - Calling `ask` cancels the running answer at once, before the returned stream is polled. A question that is superseded before it gets the lock yields nothing at all.

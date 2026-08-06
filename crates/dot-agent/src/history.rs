@@ -1,7 +1,7 @@
 //! The turns a session remembers and when it forgets them: past ten turns, after ten idle minutes, on New chat.
 //! Must not build requests or talk to the model; context.rs and session.rs do.
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 use dot_providers::ChatMessage;
 
@@ -14,7 +14,7 @@ const IDLE_RESET: Duration = Duration::from_secs(10 * 60);
 #[derive(Debug, Default)]
 pub(crate) struct History {
     turns: Vec<Turn>,
-    last_asked: Option<Instant>,
+    last_asked: Option<SystemTime>,
 }
 
 pub(crate) struct StartedTurn {
@@ -24,10 +24,12 @@ pub(crate) struct StartedTurn {
 
 impl History {
     /// Remembers the new question as the running turn and returns the request that asks it.
-    pub(crate) fn start_turn(&mut self, input: UserInput, now: Instant) -> StartedTurn {
-        let idle = self
-            .last_asked
-            .is_some_and(|last_asked| now.duration_since(last_asked) >= IDLE_RESET);
+    pub(crate) fn start_turn(&mut self, input: UserInput, now: SystemTime) -> StartedTurn {
+        // Wall-clock time, because Instant on macOS stops while the Mac sleeps. A clock set back counts as no time passed.
+        let idle = self.last_asked.is_some_and(|last_asked| {
+            now.duration_since(last_asked)
+                .is_ok_and(|idle_for| idle_for >= IDLE_RESET)
+        });
         let forgot_earlier_turns = idle && !self.turns.is_empty();
         if idle {
             self.turns.clear();
@@ -77,7 +79,7 @@ mod tests {
         }
     }
 
-    fn ask_and_answer(history: &mut History, text: &str, now: Instant) -> StartedTurn {
+    fn ask_and_answer(history: &mut History, text: &str, now: SystemTime) -> StartedTurn {
         let started = history.start_turn(question(text), now);
         history.append_to_answer(&format!("answer to {text}"));
         started
@@ -86,7 +88,7 @@ mod tests {
     #[test]
     fn keeps_at_most_ten_turns_including_the_new_question() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         for number in 1..=11 {
             ask_and_answer(
                 &mut history,
@@ -105,7 +107,7 @@ mod tests {
     #[test]
     fn forgets_earlier_turns_after_ten_idle_minutes() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         ask_and_answer(&mut history, "What city is this?", start);
 
         let started = history.start_turn(
@@ -120,7 +122,7 @@ mod tests {
     #[test]
     fn keeps_earlier_turns_within_ten_idle_minutes() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         ask_and_answer(&mut history, "What city is this?", start);
 
         let started = history.start_turn(
@@ -133,9 +135,24 @@ mod tests {
     }
 
     #[test]
+    fn a_clock_set_back_keeps_earlier_turns() {
+        let mut history = History::default();
+        let start = SystemTime::now();
+        ask_and_answer(&mut history, "What city is this?", start);
+
+        let started = history.start_turn(
+            question("How many people live there?"),
+            start - Duration::from_secs(3600),
+        );
+
+        assert_eq!(started.messages.len(), 4);
+        assert!(!started.forgot_earlier_turns);
+    }
+
+    #[test]
     fn idle_minutes_count_from_the_last_question() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         ask_and_answer(&mut history, "question 1", start);
         ask_and_answer(&mut history, "question 2", start + Duration::from_secs(500));
 
@@ -146,7 +163,7 @@ mod tests {
 
     #[test]
     fn the_first_question_forgot_nothing() {
-        let started = History::default().start_turn(question("Hi"), Instant::now());
+        let started = History::default().start_turn(question("Hi"), SystemTime::now());
 
         assert!(!started.forgot_earlier_turns);
     }
@@ -154,7 +171,7 @@ mod tests {
     #[test]
     fn a_discarded_turn_is_left_out_of_the_next_question() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         history.start_turn(question("What city is this?"), start);
         history.append_to_answer("Par");
         history.discard_running_turn();
@@ -167,7 +184,7 @@ mod tests {
     #[test]
     fn a_question_left_without_any_answer_text_is_forgotten() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         history.start_turn(question("What city is this?"), start);
 
         let started = history.start_turn(question("And now?"), start + Duration::from_secs(1));
@@ -178,7 +195,7 @@ mod tests {
     #[test]
     fn clear_forgets_every_turn() {
         let mut history = History::default();
-        let start = Instant::now();
+        let start = SystemTime::now();
         ask_and_answer(&mut history, "What city is this?", start);
         history.clear();
 

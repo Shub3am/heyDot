@@ -2,7 +2,7 @@
 //! Must not decide which turns are remembered; history.rs does.
 
 use std::sync::Mutex;
-use std::time::Instant;
+use std::time::SystemTime;
 
 use dot_providers::{ChatConfig, ProviderError, stream_chat};
 use futures_util::{Stream, StreamExt};
@@ -42,7 +42,7 @@ impl Session {
             if cancelled.is_cancelled() {
                 return;
             }
-            let turn = history.start_turn(input, Instant::now());
+            let turn = history.start_turn(input, SystemTime::now());
             yield AgentEvent::Thinking { forgot_earlier_turns: turn.forgot_earlier_turns };
             let mut answer = std::pin::pin!(stream_chat(http, config, &turn.messages));
             while let Some(delta) = cancelled.run_until_cancelled(answer.next()).await.flatten() {
