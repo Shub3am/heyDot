@@ -14,6 +14,8 @@ pub enum ProviderError {
     ModelNotFound,
     #[error("the provider is rate limiting requests")]
     RateLimited,
+    #[error("the chat is longer than the model's context")]
+    ContextTooLong,
     #[error("the model server returned an error{}: {body}", status.map(|code| format!(" (HTTP {code})")).unwrap_or_default())]
     Other { status: Option<u16>, body: String },
 }
@@ -23,6 +25,10 @@ pub(crate) fn error_for_status(status: StatusCode, body: String) -> ProviderErro
         StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => ProviderError::AuthFailed,
         // Gemini's OpenAI endpoint answers a bad key with 400 instead of 401.
         StatusCode::BAD_REQUEST if body.contains("API key not valid") => ProviderError::AuthFailed,
+        // llama-server answers a request longer than its context with 400 and this error type.
+        StatusCode::BAD_REQUEST if body.contains("exceed_context_size_error") => {
+            ProviderError::ContextTooLong
+        }
         StatusCode::NOT_FOUND => ProviderError::ModelNotFound,
         StatusCode::TOO_MANY_REQUESTS => ProviderError::RateLimited,
         _ => ProviderError::Other {

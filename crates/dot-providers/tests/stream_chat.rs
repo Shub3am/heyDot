@@ -161,6 +161,14 @@ async fn gemini_bad_key_400_is_auth_failed() {
 }
 
 #[tokio::test]
+async fn llama_server_context_overflow_is_context_too_long() {
+    let body = r#"{"error":{"code":400,"message":"request (12012 tokens) exceeds the available context size (8192 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":12012,"n_ctx":8192}}"#;
+    let server = server_answering(ResponseTemplate::new(400).set_body_string(body)).await;
+
+    assert_eq!(first_error(&server).await, ProviderError::ContextTooLong);
+}
+
+#[tokio::test]
 async fn other_400_keeps_status_and_body() {
     let server =
         server_answering(ResponseTemplate::new(400).set_body_string("context too long")).await;
