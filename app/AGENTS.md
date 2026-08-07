@@ -15,6 +15,8 @@ Invariants and gotchas:
 - `RunEvent::Exit` stops llama-server with `block_on`: Tauri ends with `process::exit`, which skips destructors, so `kill_on_drop` alone never fires.
 - The `AnswerEvent` (with `ScreenShare`) and `LocalModelStatus` serde shapes are a contract with `src/chat/ipc.ts`; the serialization tests in `commands.rs` and `local_model.rs` pin them.
 - `ask_text` captures the display under the cursor before it answers. A failed capture never fails the question: the answer comes text-only and `ScreenShare` tells the panel why.
+- `ask_text` asks through the managed `dot_agent::Session`, which remembers the conversation. A newer `ask_text` or `new_chat` ends the running one early with `Ok`, so the panel treats a resolved `ask_text` as the end of that answer, finished or not. `Started` arrives only once the previous answer has stopped.
+- `describe_answer_error` words `ProviderError` for the panel. A context overflow tells the user to click New chat.
 - The screenshot size is `Settings::default().screenshot_max_edge_px` until the settings file is loaded at startup (the settings window).
 - `build.rs` adds `-rpath /usr/lib/swift` for dot-screen's Swift bridge; without it the app aborts at launch on `libswift_Concurrency.dylib`.
 - Minimum macOS is 14.0 (`bundle.macOS.minimumSystemVersion`) because dot-screen uses `SCScreenshotManager`. Screen Recording permission belongs to `com.shub3am.heydot` in a bundle and to the terminal under `tauri dev`.
