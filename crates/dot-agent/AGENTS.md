@@ -1,11 +1,12 @@
 # dot-agent
 
-Owns: one conversation with the model. It remembers the turns and builds each request from them: the system prompt, up to nine earlier turns as text, and the new question with its screenshot. It keeps one answer in flight: a newer question or New chat cancels the running answer.
+Owns: one conversation with the model. It remembers the turns and builds each request from them: the system prompt, up to nine earlier turns as text, and the new question with its screenshot. It keeps one answer in flight: a newer question, Stop or New chat cancels the running answer.
 
 Must not know about: screen capture, speech, the UI, Tauri, llama-server, or which provider is behind the `ChatConfig`. It never retries.
 
 Entry points:
 - `Session::ask(&client, &config, UserInput)`: a stream of `AgentEvent`s. It ends when the answer is complete or cancelled, or after an `Err(ProviderError)` item.
+- `Session::stop_answer()`: ends the running answer early and keeps the conversation.
 - `Session::new_chat()`.
 
 Invariants and gotchas:

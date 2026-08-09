@@ -275,3 +275,34 @@ async fn new_chat_stops_the_running_answer() {
 
     assert!(rest_of_first.is_empty());
 }
+
+#[tokio::test]
+async fn stop_answer_ends_the_running_answer_and_keeps_its_text_for_the_next_question() {
+    let stalled = stalled_server().await;
+    let answering = server_answering(&["Madrid"]).await;
+    let session = Session::default();
+    let http = reqwest::Client::new();
+    let mut first =
+        std::pin::pin!(session.ask(&http, &stalled, question("What is the capital of France?")));
+    first.next().await;
+    first.next().await;
+
+    session.stop_answer();
+    let rest_of_first: Vec<_> = tokio::time::timeout(Duration::from_secs(5), first.collect())
+        .await
+        .expect("Stop did not end the running answer");
+    answer_events(
+        &session,
+        &config_for(answering.uri()),
+        question("And of Spain?"),
+    )
+    .await;
+
+    assert!(rest_of_first.is_empty());
+    let messages = last_request_messages(&answering).await;
+    assert_eq!(messages.len(), 4);
+    assert_eq!(
+        messages[2]["content"],
+        json!([{"type": "text", "text": "Par"}])
+    );
+}
