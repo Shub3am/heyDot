@@ -986,6 +986,7 @@ dependencies = [
 name = "dot-runtime"
 version = "0.1.0"
 dependencies = [
+ "dot-agent",
  "dot-models",
  "dot-providers",
  "futures-util",

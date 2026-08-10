@@ -1,4 +1,4 @@
-//! Proves the pinned llama-server runs the real Qwen3-VL 4B GGUF and answers through dot-providers.
+//! Proves the pinned llama-server runs the real Qwen3-VL 4B GGUF and answers through dot-providers and dot-agent.
 //! Ignored by default: it needs `scripts/build-llama-server.sh` run and the model downloaded
 //! (the app's Download button puts it where this test looks).
 
@@ -6,8 +6,9 @@ use std::io::Cursor;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use dot_agent::{AgentEvent, Session, UserInput};
 use dot_models::{QWEN3_VL_4B, installed_chat_model};
-use dot_providers::{ChatConfig, ChatMessage, ChatRole, stream_chat};
+use dot_providers::{ChatConfig, ChatMessage, ChatRole, ProviderError, stream_chat};
 use dot_runtime::{Runtime, RuntimeConfig, RuntimeState};
 use futures_util::StreamExt;
 
@@ -105,4 +106,66 @@ async fn the_real_4b_model_sees_an_attached_jpeg() {
     runtime.stop().await;
 
     assert!(answer.to_lowercase().contains("red"), "{answer}");
+}
+
+async fn answer_through(session: &Session, config: &ChatConfig, question: &str) -> String {
+    let asked_at = Instant::now();
+    let http = reqwest::Client::new();
+    let input = UserInput {
+        text: question.to_owned(),
+        jpeg_screenshot: None,
+    };
+    let answer: String = session
+        .ask(&http, config, input)
+        .filter_map(|event| async move {
+            match event.unwrap() {
+                AgentEvent::Delta(text) => Some(text),
+                AgentEvent::Thinking { .. } => None,
+            }
+        })
+        .collect()
+        .await;
+    eprintln!("whole answer after {:?}: {answer:?}", asked_at.elapsed());
+    answer
+}
+
+#[tokio::test]
+#[ignore = "needs the built llama-server and the downloaded Qwen3-VL 4B model"]
+async fn the_real_4b_model_answers_a_follow_up_through_a_session() {
+    let (runtime, config, _log_folder) = start_real_4b_model().await;
+    let session = Session::default();
+    answer_through(
+        &session,
+        &config,
+        "My favorite color is teal. Reply with OK.",
+    )
+    .await;
+    let follow_up = answer_through(
+        &session,
+        &config,
+        "What is my favorite color? Answer in one word.",
+    )
+    .await;
+    runtime.stop().await;
+
+    assert!(follow_up.to_lowercase().contains("teal"), "{follow_up}");
+}
+
+#[tokio::test]
+#[ignore = "needs the built llama-server and the downloaded Qwen3-VL 4B model"]
+async fn the_real_4b_model_reports_a_chat_longer_than_its_context() {
+    let (runtime, config, _log_folder) = start_real_4b_model().await;
+    let question = [ChatMessage {
+        role: ChatRole::User,
+        text: "word ".repeat(12_000),
+        jpeg_image: None,
+    }];
+    let http = reqwest::Client::new();
+    let mut errors = std::pin::pin!(
+        stream_chat(&http, &config, &question).filter_map(|delta| async move { delta.err() })
+    );
+    let first_error = errors.next().await;
+    runtime.stop().await;
+
+    assert_eq!(first_error, Some(ProviderError::ContextTooLong));
 }

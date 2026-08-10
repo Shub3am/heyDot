@@ -16,6 +16,6 @@ Invariants and gotchas:
 - `stop` and dropping the `Runtime` both kill the server, including one still loading. Any app exit that skips `stop` and drop (SIGKILL, SIGTERM, a panic, Force Quit) leaves llama-server running as an orphan, holding the model in memory, until it is killed by hand; it cannot answer anyone without the key.
 - stdout and stderr are appended to `log_file`, whose folder must exist. Nothing rotates it yet.
 - Tests run `fake-llama-server` (`tests/support/`), a std-only stand-in whose model file text picks ready, loading, crash or crash-first-launch. It is never shipped.
-- `tests/real_model.rs` is ignored: it needs `scripts/build-llama-server.sh` run and Qwen3-VL 4B downloaded to `~/Library/Application Support/Hey Dot/models`. It is the proof that the pinned llama-server runs that GGUF.
+- `tests/real_model.rs` is ignored: it needs `scripts/build-llama-server.sh` run and Qwen3-VL 4B downloaded to `~/Library/Application Support/Hey Dot/models`. It proves that the pinned llama-server runs that GGUF, answers a follow-up through a `dot-agent` session, and reports a context overflow in a form `dot-providers` recognizes.
 
 Called by: `app/src-tauri` (`local_model.rs`).
