@@ -35,9 +35,16 @@ function typeQuestion(text: string) {
 
 const askButton = () => screen.getByRole("button", { name: "Ask" }) as HTMLButtonElement;
 
-function started(screenShare: ScreenShare, leavesDevice = false, host = "127.0.0.1"): AnswerEvent {
-  return { event: "started", data: { leavesDevice, host, screen: screenShare } };
+function started(
+  screenShare: ScreenShare,
+  leavesDevice = false,
+  host = "127.0.0.1",
+  forgotEarlierTurns = false,
+): AnswerEvent {
+  return { event: "started", data: { leavesDevice, host, screen: screenShare, forgotEarlierTurns } };
 }
+
+const newChatButton = () => screen.getByRole("button", { name: "New chat" });
 
 afterEach(() => {
   cleanup();
@@ -137,13 +144,26 @@ test("sending a question clears the box", async () => {
   expect((screen.getByLabelText("Question") as HTMLTextAreaElement).value).toBe("");
 });
 
-test("ask stays disabled while an answer is streaming", async () => {
-  await renderPanel(() => new Promise(() => {}));
+test("asking while an answer streams sends the new question and keeps the earlier one", async () => {
+  const askedQuestions: string[] = [];
+  await renderPanel((question, onEvent) => {
+    askedQuestions.push(question);
+    if (question === "What is the capital of France?") {
+      onEvent.onmessage({ event: "delta", data: { text: "Par" } });
+      return new Promise(() => {});
+    }
+    return Promise.resolve();
+  });
   sendPhase({ kind: "ready" });
   typeQuestion("What is the capital of France?");
   fireEvent.click(askButton());
+  expect(await screen.findByText("Par")).toBeTruthy();
   typeQuestion("And of Spain?");
-  expect(askButton().disabled).toBe(true);
+  expect(askButton().disabled).toBe(false);
+  fireEvent.click(askButton());
+  await waitFor(() => expect(askedQuestions).toEqual(["What is the capital of France?", "And of Spain?"]));
+  expect(screen.getByText("What is the capital of France?")).toBeTruthy();
+  expect(screen.getByText("And of Spain?")).toBeTruthy();
 });
 
 test("an answer with a screenshot says so", async () => {
@@ -178,4 +198,68 @@ test("a failed screenshot says why the answer has none", async () => {
   expect((await screen.findByRole("status")).textContent).toContain(
     "Answered without a screenshot: no display is under the mouse cursor",
   );
+});
+
+test("a follow-up appears under the earlier answer", async () => {
+  await renderPanel(async (question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: `Answer to ${question}` } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What city is this?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Answer to What city is this?")).toBeTruthy();
+  typeQuestion("How many people live there?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Answer to How many people live there?")).toBeTruthy();
+  const turns = screen.getAllByRole("article");
+  expect(turns).toHaveLength(2);
+  expect(turns[0].textContent).toContain("Answer to What city is this?");
+  expect(turns[1].textContent).toContain("Answer to How many people live there?");
+});
+
+test("New chat clears the conversation and tells Hey Dot to forget it", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage({ event: "delta", data: { text: "Paris" } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What city is this?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Paris")).toBeTruthy();
+  fireEvent.click(newChatButton());
+  expect(screen.queryByRole("article")).toBeNull();
+  await waitFor(() => expect(invokedCommands).toContain("new_chat"));
+});
+
+test("an answer still streaming when New chat is clicked does not come back", async () => {
+  let answerChannel: Channel<AnswerEvent> | undefined;
+  await renderPanel((_question, onEvent) => {
+    answerChannel = onEvent;
+    return new Promise(() => {});
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  await waitFor(() => expect(answerChannel).toBeDefined());
+  fireEvent.click(newChatButton());
+  act(() => answerChannel!.onmessage({ event: "delta", data: { text: "Par" } }));
+  expect(screen.queryByText("Par")).toBeNull();
+  expect(screen.queryByRole("article")).toBeNull();
+});
+
+test("a question Hey Dot answers after ten idle minutes hides the turns it forgot", async () => {
+  await renderPanel(async (question, onEvent) => {
+    const forgotEarlierTurns = question === "What is on my screen now?";
+    onEvent.onmessage(started({ kind: "attached" }, false, "127.0.0.1", forgotEarlierTurns));
+    onEvent.onmessage({ event: "delta", data: { text: `Answer to ${question}` } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What city is this?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Answer to What city is this?")).toBeTruthy();
+  typeQuestion("What is on my screen now?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Answer to What is on my screen now?")).toBeTruthy();
+  expect(screen.queryByText("What city is this?")).toBeNull();
+  expect(screen.getAllByRole("article")).toHaveLength(1);
 });
