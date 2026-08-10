@@ -928,6 +928,9 @@ dependencies = [
 name = "dot-runtime"
 version = "0.1.0"
 dependencies = [
+ "dot-models",
+ "dot-providers",
+ "futures-util",
  "getrandom 0.4.3",
  "hex",
  "reqwest",
