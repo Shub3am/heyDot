@@ -94,10 +94,12 @@ async fn supervise(
     state: watch::Sender<RuntimeState>,
     mut stop_requested: oneshot::Receiver<()>,
 ) {
+    // reqwest follows the system and env proxy by default, which cannot reach this Mac's loopback.
     let health_client = reqwest::Client::builder()
         .timeout(HEALTH_REQUEST_TIMEOUT)
+        .no_proxy()
         .build()
-        .expect("a client with only a timeout always builds");
+        .expect("a client with only a timeout and no proxy always builds");
     let mut recent_crashes: VecDeque<Instant> = VecDeque::new();
     loop {
         state.send_replace(RuntimeState::Starting);
