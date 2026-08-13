@@ -1,0 +1,263 @@
+/* The look of the whole app: native macOS, following the system light or dark appearance.
+   Must not load fonts or anything else from the network; the app starts offline. */
+
+:root {
+  color-scheme: light dark;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-code: ui-monospace, "SF Mono", Menlo, monospace;
+  --accent: #007aff;
+  --accent-text: #ffffff;
+  --window: #f5f5f7;
+  --surface: #ffffff;
+  --surface-sunken: #ececf0;
+  --border: rgba(0, 0, 0, 0.1);
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --ready: #34c759;
+  --busy: #ff9f0a;
+  --failed: #ff3b30;
+  --notice-surface: #fff6e5;
+  --error-surface: #ffeceb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #0a84ff;
+    --window: #1c1c1e;
+    --surface: #2c2c2e;
+    --surface-sunken: #232325;
+    --border: rgba(255, 255, 255, 0.1);
+    --text: #f5f5f7;
+    --text-secondary: #98989d;
+    --ready: #30d158;
+    --busy: #ff9f0a;
+    --failed: #ff453a;
+    --notice-surface: #3a2f1c;
+    --error-surface: #3d1f1d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root,
+.app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--window);
+  color: var(--text);
+  font: 14px/1.5 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  /* The window chrome behaves like a native app; only conversation text is selectable. */
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+button {
+  font: inherit;
+  border: none;
+  border-radius: 7px;
+  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: default;
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 0 0 0.5px var(--border), 0 1px 1px rgba(0, 0, 0, 0.06);
+}
+
+button:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--window);
+}
+
+.model-status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+
+.model-status h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.model-status p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.model-status p::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: var(--busy);
+}
+
+.model-status[data-phase="ready"] p::before {
+  background: var(--ready);
+}
+
+.model-status[data-phase="notInstalled"] p::before,
+.model-status[data-phase="downloadFailed"] p::before,
+.model-status[data-phase="down"] p::before {
+  background: var(--failed);
+}
+
+.model-status p button {
+  margin-left: 6px;
+  padding: 1px 10px;
+  font-size: 12px;
+}
+
+.conversation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 16px 8px;
+}
+
+.empty {
+  margin: 30vh 0 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.turn {
+  max-width: 720px;
+  margin: 0 auto 20px;
+}
+
+.question {
+  width: fit-content;
+  max-width: 80%;
+  margin: 0 0 12px auto;
+  padding: 7px 13px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: var(--accent-text);
+  white-space: pre-wrap;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.answer {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.meta {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.meta span + span::before {
+  content: "·";
+  margin-right: 6px;
+}
+
+.answer-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.notice,
+.error {
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.notice {
+  background: var(--notice-surface);
+}
+
+.notice button {
+  display: block;
+  margin-top: 6px;
+}
+
+.error {
+  background: var(--error-surface);
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: 752px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8px 16px 16px;
+}
+
+.composer textarea {
+  flex: 1;
+  min-height: 34px;
+  max-height: 160px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  resize: none;
+  field-sizing: content;
+}
+
+.composer textarea::placeholder {
+  color: var(--text-secondary);
+}
+
+.send {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 34px;
+}
