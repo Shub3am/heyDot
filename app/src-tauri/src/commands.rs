@@ -135,6 +135,12 @@ pub async fn ask_text(
     Ok(())
 }
 
+/// Stops the running answer; the next question still follows up on it.
+#[tauri::command]
+pub fn stop_answer(session: State<'_, Session>) {
+    session.stop_answer();
+}
+
 /// Stops the running answer; the next question starts a new chat.
 #[tauri::command]
 pub async fn new_chat(session: State<'_, Session>) -> Result<(), String> {

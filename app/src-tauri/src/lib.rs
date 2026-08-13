@@ -48,6 +48,7 @@ pub fn run() {
             commands::watch_local_model,
             commands::download_local_model,
             commands::ask_text,
+            commands::stop_answer,
             commands::new_chat,
             commands::open_screen_recording_settings
         ])

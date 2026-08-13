@@ -37,13 +37,18 @@ export function downloadLocalModel(): Promise<void> {
   return invoke("download_local_model");
 }
 
-/** Resolves when the answer is complete or a newer question or New chat stopped it; rejects with the error text when it fails. */
+/** Resolves when the answer is complete or a newer question, Stop or New chat stopped it; rejects with the error text when it fails. */
 export function askText(question: string, onEvent: (event: AnswerEvent) => void): Promise<void> {
   return invoke("ask_text", { question, onEvent: new Channel(onEvent) });
 }
 
 export function openScreenRecordingSettings(): Promise<void> {
   return invoke("open_screen_recording_settings");
+}
+
+/** Stops the running answer; the next question still follows up on it. */
+export function stopAnswer(): Promise<void> {
+  return invoke("stop_answer");
 }
 
 /** Stops the running answer; the next question starts a new chat. */

@@ -19,4 +19,4 @@ Invariants and gotchas:
 - Calling `ask` cancels the running answer at once, before the returned stream is polled. A question that is superseded before it gets the lock yields nothing at all.
 - A context overflow is not trimmed: the request fails with `ContextTooLong`, and the user starts a new chat.
 
-Called by: `app/src-tauri` (the `ask_text` and `new_chat` commands) and `crates/dot-runtime`'s ignored real-model test.
+Called by: `app/src-tauri` (the `ask_text`, `stop_answer` and `new_chat` commands) and `crates/dot-runtime`'s ignored real-model test.
