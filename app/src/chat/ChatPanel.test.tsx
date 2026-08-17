@@ -298,3 +298,40 @@ test("Enter on an empty question does not ask", async () => {
   fireEvent.keyDown(screen.getByLabelText("Question"), { key: "Enter" });
   expect(invokedCommands).not.toContain("ask_text");
 });
+
+test("renders the answer as markdown with highlighted code", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: "It is **Paris**.\n\n```js\nconst city = " } });
+    onEvent.onmessage({ event: "delta", data: { text: '"Paris";\n```\n' } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  expect((await screen.findByText("Paris", { selector: "strong" })).tagName).toBe("STRONG");
+  expect(screen.getByText("const").className).toContain("hljs-keyword");
+});
+
+test("shows HTML in an answer as text instead of running it", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: 'Hi <img src="x" onerror="alert(1)">' } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("Say hi");
+  fireEvent.click(askButton());
+  await screen.findByText(/Hi/);
+  expect(document.querySelector(".answer img")).toBeNull();
+});
+
+test("renders a markdown table in the answer as a table", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: "| City | Country |\n| --- | --- |\n| Paris | France |\n" } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("List capitals");
+  fireEvent.click(askButton());
+  expect(await screen.findByRole("table")).toBeTruthy();
+  expect(screen.getByRole("cell", { name: "Paris" })).toBeTruthy();
+});

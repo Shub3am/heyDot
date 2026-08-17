@@ -18,6 +18,12 @@
   --failed: #ff3b30;
   --notice-surface: #fff6e5;
   --error-surface: #ffeceb;
+  --code-keyword: #ad3da4;
+  --code-string: #c41a16;
+  --code-number: #1c00cf;
+  --code-comment: #5d6c79;
+  --code-title: #3f6e74;
+  --code-type: #0b4f79;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -34,6 +40,12 @@
     --failed: #ff453a;
     --notice-surface: #3a2f1c;
     --error-surface: #3d1f1d;
+    --code-keyword: #ff7ab2;
+    --code-string: #ff8170;
+    --code-number: #d9c97c;
+    --code-comment: #7f8c98;
+    --code-title: #67b7a4;
+    --code-type: #5dd8ff;
   }
 }
 
@@ -197,9 +209,118 @@ textarea:focus-visible {
   margin-right: 6px;
 }
 
-.answer-text {
-  margin: 0;
-  white-space: pre-wrap;
+.answer-text > :first-child {
+  margin-top: 0;
+}
+
+.answer-text > :last-child {
+  margin-bottom: 0;
+}
+
+.answer-text p,
+.answer-text ul,
+.answer-text ol,
+.answer-text pre,
+.answer-text table,
+.answer-text blockquote {
+  margin: 0 0 10px;
+}
+
+.answer-text ul,
+.answer-text ol {
+  padding-left: 22px;
+}
+
+.answer-text h1,
+.answer-text h2,
+.answer-text h3 {
+  margin: 14px 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.answer-text blockquote {
+  padding-left: 12px;
+  border-left: 3px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.answer-text a {
+  color: var(--accent);
+}
+
+.answer-text code {
+  font-family: var(--font-code);
+  font-size: 12.5px;
+}
+
+.answer-text :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-sunken);
+}
+
+.answer-text pre {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  line-height: 1.45;
+}
+
+.answer-text table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.answer-text th,
+.answer-text td {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.answer-text th {
+  background: var(--surface-sunken);
+  font-weight: 600;
+}
+
+.hljs-keyword,
+.hljs-built_in,
+.hljs-literal,
+.hljs-selector-tag {
+  color: var(--code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-attr,
+.hljs-symbol {
+  color: var(--code-string);
+}
+
+.hljs-number {
+  color: var(--code-number);
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-meta {
+  color: var(--code-comment);
+  font-style: italic;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name {
+  color: var(--code-title);
+}
+
+.hljs-type,
+.hljs-variable,
+.hljs-params {
+  color: var(--code-type);
 }
 
 .notice,
