@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import type { Channel } from "@tauri-apps/api/core";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, expect, test, vi } from "vitest";
+import useLocalModelStatus from "../localModel/useLocalModelStatus";
 import ChatPanel from "./ChatPanel";
 import type { AnswerEvent, LocalModelPhase, LocalModelStatus, ScreenShare } from "./ipc";
 
@@ -9,6 +10,10 @@ type AskHandler = (question: string, onEvent: Channel<AnswerEvent>) => Promise<v
 
 let invokedCommands: string[] = [];
 let statusChannel: Channel<LocalModelStatus> | undefined;
+
+function ChatPanelWithModel() {
+  return <ChatPanel status={useLocalModelStatus()} />;
+}
 
 async function renderPanel(onAsk: AskHandler = async () => {}) {
   mockIPC((command, args) => {
@@ -21,7 +26,7 @@ async function renderPanel(onAsk: AskHandler = async () => {}) {
       return onAsk(namedArgs.question as string, namedArgs.onEvent as Channel<AnswerEvent>);
     }
   });
-  render(<ChatPanel />);
+  render(<ChatPanelWithModel />);
   await waitFor(() => expect(statusChannel).toBeDefined());
 }
 
@@ -51,35 +56,6 @@ afterEach(() => {
   clearMocks();
   invokedCommands = [];
   statusChannel = undefined;
-});
-
-test("offers to download a missing model with its size", async () => {
-  await renderPanel();
-  sendPhase({ kind: "notInstalled" });
-  expect(screen.getByText(/3\.3 GB/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Download Qwen3-VL 4B" }));
-  await waitFor(() => expect(invokedCommands).toContain("download_local_model"));
-});
-
-test("shows download progress as a percent", async () => {
-  await renderPanel();
-  sendPhase({ kind: "downloading", percent: 42 });
-  expect(screen.getByText("Downloading Qwen3-VL 4B: 42%")).toBeTruthy();
-});
-
-test("a failed download shows the reason and can be retried", async () => {
-  await renderPanel();
-  sendPhase({ kind: "downloadFailed", reason: "server answered 503" });
-  expect(screen.getByText(/server answered 503/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-  await waitFor(() => expect(invokedCommands).toContain("download_local_model"));
-});
-
-test("a stopped server shows the reason and where its log is", async () => {
-  await renderPanel();
-  sendPhase({ kind: "down", reason: "llama-server stopped 4 times within a minute" });
-  expect(screen.getByText(/stopped 4 times within a minute/)).toBeTruthy();
-  expect(screen.getByText(/~\/Library\/Logs\/Hey Dot\/llama-server\.log/)).toBeTruthy();
 });
 
 test("ask stays disabled until the model is ready", async () => {
