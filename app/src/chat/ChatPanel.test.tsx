@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Channel } from "@tauri-apps/api/core";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import ChatPanel from "./ChatPanel";
 import type { AnswerEvent, LocalModelPhase, LocalModelStatus, ScreenShare } from "./ipc";
 
@@ -334,4 +334,30 @@ test("renders a markdown table in the answer as a table", async () => {
   fireEvent.click(askButton());
   expect(await screen.findByRole("table")).toBeTruthy();
   expect(screen.getByRole("cell", { name: "Paris" })).toBeTruthy();
+});
+
+test("copies the answer as markdown", async () => {
+  const writeText = vi.fn(async (_text: string) => {});
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+    onEvent.onmessage({ event: "delta", data: { text: "It is **Paris**." } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  fireEvent.click(await screen.findByRole("button", { name: "Copy answer" }));
+  expect(writeText).toHaveBeenCalledWith("It is **Paris**.");
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
+});
+
+test("offers no copy button before any answer text arrives", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  await screen.findByText("On this Mac");
+  expect(screen.queryByRole("button", { name: "Copy answer" })).toBeNull();
 });

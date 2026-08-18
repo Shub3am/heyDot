@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import CopyAnswerButton from "./CopyAnswerButton";
 import {
   askText,
   downloadLocalModel,
@@ -182,6 +183,7 @@ export default function ChatPanel() {
               <div className="answer-text">
                 <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{turn.text}</Markdown>
               </div>
+              {turn.text && <CopyAnswerButton answer={turn.text} />}
               {turn.error && (
                 <p role="alert" className="error">
                   {turn.error}

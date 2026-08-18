@@ -323,6 +323,13 @@ textarea:focus-visible {
   color: var(--code-type);
 }
 
+.copy {
+  margin-top: 6px;
+  padding: 1px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .notice,
 .error {
   margin: 6px 0;
