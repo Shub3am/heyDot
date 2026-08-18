@@ -2,30 +2,27 @@
 // Must not call invoke directly; every backend call goes through ./ipc.
 
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
-import Markdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import remarkGfm from "remark-gfm";
-import CopyAnswerButton from "./CopyAnswerButton";
+import ChatTurn, { type Turn } from "./ChatTurn";
 import {
   askText,
   downloadLocalModel,
   newChat,
-  openScreenRecordingSettings,
   watchLocalModel,
+  type LocalModelPhase,
   type LocalModelStatus,
-  type ScreenShare,
 } from "./ipc";
 
 const SERVER_LOG_PATH = "~/Library/Logs/Hey Dot/llama-server.log";
 
-type Turn = {
-  id: number;
-  question: string;
-  text: string;
-  badge: string | null;
-  screen: ScreenShare | null;
-  error: string | null;
+const STATUS_DOT: Record<LocalModelPhase["kind"], "ready" | "busy" | "failed"> = {
+  notInstalled: "failed",
+  downloading: "busy",
+  downloadFailed: "failed",
+  starting: "busy",
+  ready: "ready",
+  down: "failed",
 };
+
 
 function describeModel(status: LocalModelStatus | null) {
   if (status === null) {
@@ -66,26 +63,6 @@ function describeModel(status: LocalModelStatus | null) {
   }
 }
 
-function describeMissingScreenshot(screen: ScreenShare) {
-  switch (screen.kind) {
-    case "attached":
-      return null;
-    case "permissionNeeded":
-      return (
-        <p role="status" className="notice">
-          Answered without a screenshot: Hey Dot needs Screen Recording permission. Turn on Hey Dot in System
-          Settings, then quit and reopen Hey Dot.{" "}
-          <button onClick={() => void openScreenRecordingSettings()}>Open Screen Recording settings</button>
-        </p>
-      );
-    case "failed":
-      return (
-        <p role="status" className="notice">
-          Answered without a screenshot: {screen.reason}
-        </p>
-      );
-  }
-}
 
 export default function ChatPanel() {
   const [status, setStatus] = useState<LocalModelStatus | null>(null);
@@ -159,7 +136,7 @@ export default function ChatPanel() {
   return (
     <section className="chat">
       <header className="chat-header">
-        <div className="model-status" data-phase={status?.phase.kind ?? "checking"}>
+        <div className="model-status" data-dot={status ? STATUS_DOT[status.phase.kind] : "busy"}>
           <h1>Hey Dot</h1>
           {describeModel(status)}
         </div>
@@ -170,27 +147,7 @@ export default function ChatPanel() {
       <div className="conversation" ref={conversation} onScroll={rememberScrollPosition}>
         {turns.length === 0 && <p className="empty">Ask about anything on your screen.</p>}
         {turns.map((turn) => (
-          <article key={turn.id} className="turn">
-            <p className="question">{turn.question}</p>
-            <div className="answer">
-              {(turn.badge || turn.screen?.kind === "attached") && (
-                <p className="meta">
-                  {turn.badge && <span>{turn.badge}</span>}
-                  {turn.screen?.kind === "attached" && <span>With a screenshot of this screen</span>}
-                </p>
-              )}
-              {turn.screen && describeMissingScreenshot(turn.screen)}
-              <div className="answer-text">
-                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{turn.text}</Markdown>
-              </div>
-              {turn.text && <CopyAnswerButton answer={turn.text} />}
-              {turn.error && (
-                <p role="alert" className="error">
-                  {turn.error}
-                </p>
-              )}
-            </div>
-          </article>
+          <ChatTurn key={turn.id} turn={turn} />
         ))}
       </div>
       <footer className="composer">

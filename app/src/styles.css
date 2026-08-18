@@ -145,13 +145,11 @@ textarea:focus-visible {
   background: var(--busy);
 }
 
-.model-status[data-phase="ready"] p::before {
+.model-status[data-dot="ready"] p::before {
   background: var(--ready);
 }
 
-.model-status[data-phase="notInstalled"] p::before,
-.model-status[data-phase="downloadFailed"] p::before,
-.model-status[data-phase="down"] p::before {
+.model-status[data-dot="failed"] p::before {
   background: var(--failed);
 }
 
