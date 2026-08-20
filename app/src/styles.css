@@ -114,6 +114,11 @@ textarea:focus-visible {
   background: var(--window);
 }
 
+.chat-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .chat-header h1 {
   margin: 0;
   font-size: 14px;

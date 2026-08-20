@@ -3,12 +3,13 @@
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import ChatTurn, { type Turn } from "./ChatTurn";
-import { askText, newChat, type LocalModelStatus } from "./ipc";
+import { askText, newChat, stopAnswer, type LocalModelStatus } from "./ipc";
 
 /** `status` only decides whether a question can be asked; the sidebar shows it. */
 export default function ChatPanel({ status }: { status: LocalModelStatus | null }) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [answeringTurnId, setAnsweringTurnId] = useState<number | null>(null);
   const nextTurnId = useRef(0);
   const conversation = useRef<HTMLDivElement>(null);
   const wasScrolledToBottom = useRef(true);
@@ -35,6 +36,7 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
     const id = nextTurnId.current++;
     setQuestion("");
     setTurns((current) => [...current, { id, question, text: "", badge: null, screen: null, error: null }]);
+    setAnsweringTurnId(id);
     try {
       await askText(question, (event) => {
         if (event.event === "started") {
@@ -49,6 +51,9 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
       });
     } catch (error) {
       updateTurn(id, (turn) => ({ ...turn, error: String(error) }));
+    } finally {
+      // A superseded answer ends after the newer one started, and must not mark that one as done.
+      setAnsweringTurnId((current) => (current === id ? null : current));
     }
   }
 
@@ -73,10 +78,15 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
   return (
     <section className="chat">
       <header className="chat-header">
-        <h1>Hey Dot</h1>
-        <button className="secondary" onClick={startNewChat}>
-          New chat
-        </button>
+        <h1>Chat</h1>
+        <div className="chat-actions">
+          <button className="secondary" disabled={answeringTurnId === null} onClick={() => void stopAnswer()}>
+            Stop
+          </button>
+          <button className="secondary" onClick={startNewChat}>
+            New chat
+          </button>
+        </div>
       </header>
       <div className="conversation" ref={conversation} onScroll={rememberScrollPosition}>
         {turns.length === 0 && <p className="empty">Ask about anything on your screen.</p>}
