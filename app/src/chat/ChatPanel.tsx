@@ -3,7 +3,7 @@
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import ChatTurn, { type Turn } from "./ChatTurn";
-import { askText, newChat, stopAnswer, type LocalModelStatus } from "./ipc";
+import { askText, stopAnswer, type LocalModelStatus } from "./ipc";
 
 /** `status` only decides whether a question can be asked; the sidebar shows it. */
 export default function ChatPanel({ status }: { status: LocalModelStatus | null }) {
@@ -27,7 +27,6 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
     wasScrolledToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
   }
 
-  // A turn removed by New chat is not found, so its late events change nothing.
   function updateTurn(id: number, update: (turn: Turn) => Turn) {
     setTurns((current) => current.map((turn) => (turn.id === id ? update(turn) : turn)));
   }
@@ -57,11 +56,6 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
     }
   }
 
-  function startNewChat() {
-    setTurns([]);
-    void newChat();
-  }
-
   const canAsk = status?.phase.kind === "ready" && question.trim() !== "";
 
   // Enter while an input method is composing picks a candidate (Japanese, Chinese), so it must not ask.
@@ -77,16 +71,11 @@ export default function ChatPanel({ status }: { status: LocalModelStatus | null 
 
   return (
     <section className="chat">
-      <header className="chat-header">
+      <header className="page-header">
         <h1>Chat</h1>
-        <div className="chat-actions">
-          <button className="secondary" disabled={answeringTurnId === null} onClick={() => void stopAnswer()}>
-            Stop
-          </button>
-          <button className="secondary" onClick={startNewChat}>
-            New chat
-          </button>
-        </div>
+        <button className="secondary" disabled={answeringTurnId === null} onClick={() => void stopAnswer()}>
+          Stop
+        </button>
       </header>
       <div className="conversation" ref={conversation} onScroll={rememberScrollPosition}>
         {turns.length === 0 && <p className="empty">Ask about anything on your screen.</p>}

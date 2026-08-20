@@ -6,6 +6,12 @@ Must not know about: model formats, audio processing, provider HTTP details. Tho
 
 Entry points: `src-tauri/src/main.rs` -> `hey_dot_lib::run()` in `src-tauri/src/lib.rs`; UI starts at `src/main.tsx`. IPC commands live in `src-tauri/src/commands.rs` and their TypeScript mirror in `src/chat/ipc.ts`.
 
+UI modules under `src/`, each with its own AGENTS.md where it has one:
+- `shell/`: the sidebar and the frame every page sits in. See `src/shell/AGENTS.md`.
+- `chat/`: the Chat page and the IPC mirror.
+- `localModel/`: the local model status in the sidebar. See `src/localModel/AGENTS.md`.
+- `history/`, `documents/`, `settings/`: one page each. See their AGENTS.md.
+
 Invariants and gotchas:
 - `tauri::generate_context!` reads `dist/` at compile time, so `pnpm build` must run before `cargo clippy/test/build` on a fresh checkout.
 - Commands registered with `invoke_handler` are allowed for every window by default. Capabilities in `src-tauri/capabilities/` gate plugin commands; a new plugin command needs a permission entry there.
