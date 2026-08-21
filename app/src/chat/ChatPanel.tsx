@@ -23,7 +23,6 @@ const STATUS_DOT: Record<LocalModelPhase["kind"], "ready" | "busy" | "failed"> =
   down: "failed",
 };
 
-
 function describeModel(status: LocalModelStatus | null) {
   if (status === null) {
     return <p>Checking the local model...</p>;
@@ -62,7 +61,6 @@ function describeModel(status: LocalModelStatus | null) {
       );
   }
 }
-
 
 export default function ChatPanel() {
   const [status, setStatus] = useState<LocalModelStatus | null>(null);
