@@ -4,6 +4,7 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import ChatTurn, { type Turn } from "./ChatTurn";
 import { askText, stopAnswer, type LocalModelStatus } from "./ipc";
+import "./chat.css";
 
 /** `status` only decides whether a question can be asked; the sidebar shows it. */
 export default function ChatPanel({ status }: { status: LocalModelStatus | null }) {

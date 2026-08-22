@@ -27,6 +27,8 @@ Invariants and gotchas:
 - `build.rs` adds `-rpath /usr/lib/swift` for dot-screen's Swift bridge; without it the app aborts at launch on `libswift_Concurrency.dylib`.
 - Minimum macOS is 14.0 (`bundle.macOS.minimumSystemVersion`) because dot-screen uses `SCScreenshotManager`. Screen Recording permission belongs to `com.shub3am.heydot` in a bundle and to the terminal under `tauri dev`.
 - Two HTTP clients: downloads follow the system proxy, while `local_model_http_client()` (managed state, used by `ask_text`) skips it so prompts and the llama-server key never reach a proxy. `tests/local_model_http_client.rs` pins it.
+- The window is transparent with the `sidebar` window effect, so `html` and `body` stay transparent and each page paints its own background. Transparency needs `app.macOSPrivateApi` plus the tauri `macos-private-api` feature; tauri-build fails when the two disagree, and the private API keeps Hey Dot out of the Mac App Store.
+- The title bar is an overlay: the page draws under the traffic lights. Only elements marked `data-tauri-drag-region` move the window, and that needs `core:window:allow-start-dragging` in `capabilities/default.json`.
 - The UI uses system fonts and bundled CSS only, so nothing is fetched at launch. `src/styles.css` holds the colour variables in `:root`, redefined for dark mode under `prefers-color-scheme`, and each UI module imports its own CSS file.
 - Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
 - Which local model runs is `pick_local_model(recommend(hardware))` until onboarding lets the user choose.

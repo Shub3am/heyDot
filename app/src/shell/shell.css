@@ -5,15 +5,21 @@
   display: flex;
 }
 
+/* No background: the window's sidebar material shows through the transparent page. */
 .sidebar {
   display: flex;
   flex-direction: column;
   flex: none;
   width: 220px;
-  padding: 12px 10px;
+  padding: 0 10px 12px;
   gap: 12px;
   border-right: 1px solid var(--border);
-  background: var(--surface-sunken);
+}
+
+.sidebar-drag-strip {
+  flex: none;
+  height: 52px;
+  margin-bottom: -12px;
 }
 
 .sidebar button {
@@ -114,4 +120,27 @@
 
 .page-card-today {
   color: var(--text-secondary);
+}
+
+/* A narrow window keeps every sidebar button as an icon; the model status keeps only its dot. */
+@media (max-width: 719px) {
+  .sidebar {
+    width: 64px;
+  }
+
+  .sidebar button {
+    justify-content: center;
+    padding: 5px 0;
+  }
+
+  .sidebar-label,
+  .sidebar-status button {
+    display: none;
+  }
+
+  /* The status sentence is bare text beside the dot, so zero font size hides the text and leaves the dot. */
+  .sidebar-status p {
+    font-size: 0;
+    text-align: center;
+  }
 }
