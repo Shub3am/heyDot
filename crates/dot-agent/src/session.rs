@@ -1,4 +1,4 @@
-//! One conversation's single answer in flight: a newer question or New chat stops the running one.
+//! One conversation's single answer in flight: a newer question, Stop or New chat stops the running one.
 //! Must not decide which turns are remembered; history.rs does.
 
 use std::sync::Mutex;
@@ -29,7 +29,7 @@ pub struct Session {
 
 impl Session {
     /// Cancels the running answer at once. The stream ends when this answer is complete, when a
-    /// newer question or `new_chat` cancels it, or after the error that stopped it.
+    /// newer question, `stop_answer` or `new_chat` cancels it, or after the error that stopped it.
     pub fn ask<'a>(
         &'a self,
         http: &'a reqwest::Client,
@@ -58,6 +58,11 @@ impl Session {
                 }
             }
         }
+    }
+
+    /// Stops the running answer. Its text so far stays in the conversation.
+    pub fn stop_answer(&self) {
+        self.running_answer.lock().unwrap().cancel();
     }
 
     /// Stops the running answer, then forgets every turn once it has stopped.
