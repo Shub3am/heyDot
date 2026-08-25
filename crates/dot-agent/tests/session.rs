@@ -90,7 +90,10 @@ async fn answer_events(
     input: UserInput,
 ) -> Vec<Result<AgentEvent, ProviderError>> {
     let http = reqwest::Client::new();
-    session.ask(&http, config, input).collect().await
+    session
+        .ask(session.begin_answer(), &http, config, input)
+        .collect()
+        .await
 }
 
 async fn last_request_messages(server: &MockServer) -> Vec<serde_json::Value> {
@@ -225,8 +228,12 @@ async fn a_new_question_stops_the_running_answer_and_keeps_its_text_so_far() {
     let answering_config = config_for(answering.uri());
     let session = Session::default();
     let http = reqwest::Client::new();
-    let mut first =
-        std::pin::pin!(session.ask(&http, &stalled, question("What is the capital of France?")));
+    let mut first = std::pin::pin!(session.ask(
+        session.begin_answer(),
+        &http,
+        &stalled,
+        question("What is the capital of France?")
+    ));
     assert_eq!(
         first.next().await,
         Some(Ok(AgentEvent::Thinking {
@@ -238,7 +245,12 @@ async fn a_new_question_stops_the_running_answer_and_keeps_its_text_so_far() {
         Some(Ok(AgentEvent::Delta("Par".to_owned())))
     );
 
-    let second = session.ask(&http, &answering_config, question("And of Spain?"));
+    let second = session.ask(
+        session.begin_answer(),
+        &http,
+        &answering_config,
+        question("And of Spain?"),
+    );
     let rest_of_first: Vec<_> = tokio::time::timeout(Duration::from_secs(5), first.collect())
         .await
         .expect("the running answer did not stop");
@@ -262,8 +274,12 @@ async fn new_chat_stops_the_running_answer() {
     let stalled = stalled_server().await;
     let session = Session::default();
     let http = reqwest::Client::new();
-    let mut first =
-        std::pin::pin!(session.ask(&http, &stalled, question("What is the capital of France?")));
+    let mut first = std::pin::pin!(session.ask(
+        session.begin_answer(),
+        &http,
+        &stalled,
+        question("What is the capital of France?")
+    ));
     first.next().await;
     first.next().await;
 
@@ -282,8 +298,12 @@ async fn stop_answer_ends_the_running_answer_and_keeps_its_text_for_the_next_que
     let answering = server_answering(&["Madrid"]).await;
     let session = Session::default();
     let http = reqwest::Client::new();
-    let mut first =
-        std::pin::pin!(session.ask(&http, &stalled, question("What is the capital of France?")));
+    let mut first = std::pin::pin!(session.ask(
+        session.begin_answer(),
+        &http,
+        &stalled,
+        question("What is the capital of France?")
+    ));
     first.next().await;
     first.next().await;
 
@@ -305,4 +325,55 @@ async fn stop_answer_ends_the_running_answer_and_keeps_its_text_for_the_next_que
         messages[2]["content"],
         json!([{"type": "text", "text": "Par"}])
     );
+}
+
+#[tokio::test]
+async fn stop_before_the_question_is_sent_ends_it_without_asking_the_model() {
+    let server = server_answering(&["Paris"]).await;
+    let session = Session::default();
+    let http = reqwest::Client::new();
+
+    let answer = session.begin_answer();
+    session.stop_answer();
+    let events: Vec<_> = session
+        .ask(
+            answer,
+            &http,
+            &config_for(server.uri()),
+            question("Capital of France?"),
+        )
+        .collect()
+        .await;
+
+    assert!(events.is_empty());
+    assert!(server.received_requests().await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn new_chat_before_the_question_is_sent_keeps_it_out_of_the_new_chat() {
+    let first_server = server_answering(&["Paris"]).await;
+    let second_server = server_answering(&["Madrid"]).await;
+    let session = Session::default();
+    let http = reqwest::Client::new();
+
+    let answer = session.begin_answer();
+    session.new_chat().await;
+    let events: Vec<_> = session
+        .ask(
+            answer,
+            &http,
+            &config_for(first_server.uri()),
+            question("Capital of France?"),
+        )
+        .collect()
+        .await;
+    answer_events(
+        &session,
+        &config_for(second_server.uri()),
+        question("And of Spain?"),
+    )
+    .await;
+
+    assert!(events.is_empty());
+    assert_eq!(last_request_messages(&second_server).await.len(), 2);
 }

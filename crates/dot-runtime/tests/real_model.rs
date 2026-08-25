@@ -116,7 +116,7 @@ async fn answer_through(session: &Session, config: &ChatConfig, question: &str) 
         jpeg_screenshot: None,
     };
     let answer: String = session
-        .ask(&http, config, input)
+        .ask(session.begin_answer(), &http, config, input)
         .filter_map(|event| async move {
             match event.unwrap() {
                 AgentEvent::Delta(text) => Some(text),

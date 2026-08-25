@@ -5,7 +5,8 @@ Owns: one conversation with the model. It remembers the turns and builds each re
 Must not know about: screen capture, speech, the UI, Tauri, llama-server, or which provider is behind the `ChatConfig`. It never retries.
 
 Entry points:
-- `Session::ask(&client, &config, UserInput)`: a stream of `AgentEvent`s. It ends when the answer is complete or cancelled, or after an `Err(ProviderError)` item.
+- `Session::begin_answer()`: makes a new answer the running one and returns it as a `RunningAnswer`.
+- `Session::ask(RunningAnswer, &client, &config, UserInput)`: a stream of `AgentEvent`s. It ends when the answer is complete or cancelled, or after an `Err(ProviderError)` item.
 - `Session::stop_answer()`: ends the running answer early and keeps the conversation.
 - `Session::new_chat()`.
 
@@ -16,7 +17,7 @@ Invariants and gotchas:
 - Ten idle minutes of wall-clock time, counted from the last question and including time the Mac slept, forget every turn. A clock set back counts as no idle time. The next `Thinking` then says `forgot_earlier_turns: true`, so the UI can drop them too.
 - A cancelled answer stays in history with its text so far. A failed answer is discarded. A question with no answer text is forgotten when the next question starts.
 - The history lock is held for a whole answer, so `new_chat` waits until the running answer notices its cancellation. A consumer that stops polling a stream without dropping it blocks every later question.
-- Calling `ask` cancels the running answer at once, before the returned stream is polled. A question that is superseded before it gets the lock yields nothing at all.
+- `begin_answer` cancels the running answer at once. Call it before slow work such as the screenshot, so Stop or New chat during that work cancel this answer. An answer cancelled before it gets the lock yields nothing at all and never reaches the model.
 - A context overflow is not trimmed: the request fails with `ContextTooLong`, and the user starts a new chat.
 
 Called by: `app/src-tauri` (the `ask_text`, `stop_answer` and `new_chat` commands) and `crates/dot-runtime`'s ignored real-model test.
