@@ -14,7 +14,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [chatKey, setChatKey] = useState(0);
 
-  // A new key remounts the Chat page with no turns; the backend forgets the conversation on its own.
+  // A new key remounts the Chat page with no turns, and newChat tells the backend to forget the conversation.
   function startNewChat() {
     setCurrentPage("chat");
     setChatKey((key) => key + 1);
@@ -29,7 +29,7 @@ function App() {
       <main className="page-area">
         {/* Chat stays mounted on other pages so a running answer and its turns survive the switch. */}
         <div className="page-slot" hidden={currentPage !== "chat"}>
-          <ChatPanel key={chatKey} status={localModelStatus} />
+          <ChatPanel key={chatKey} status={localModelStatus} isVisible={currentPage === "chat"} />
         </div>
         {currentPage === "history" && <HistoryPage />}
         {currentPage === "documents" && <DocumentsPage />}

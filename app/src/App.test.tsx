@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Channel } from "@tauri-apps/api/core";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import App from "./App";
 import type { AnswerEvent, LocalModelStatus } from "./chat/ipc";
 
@@ -34,6 +34,7 @@ function ask(question: string) {
 const pageButton = (label: string) => screen.getByRole("button", { name: label });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   cleanup();
   clearMocks();
   invokedCommands = [];
@@ -73,6 +74,25 @@ test("turns in Chat survive a switch to History and back", async () => {
   expect(screen.queryByRole("article")).toBeNull();
   fireEvent.click(pageButton("Chat"));
   expect(screen.getByRole("article").textContent).toContain("Paris");
+});
+
+test("an answer that grows while Chat is hidden is scrolled to its end when Chat opens again", async () => {
+  // jsdom has no layout; like WebKit, a conversation inside a hidden page has no height.
+  vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
+    return this.closest("[hidden]") ? 0 : this.textContent!.length * 10;
+  });
+  let answerChannel: Channel<AnswerEvent> | undefined;
+  await renderApp((onEvent) => {
+    answerChannel = onEvent;
+    return new Promise(() => {});
+  });
+  ask("What is the capital of France?");
+  await waitFor(() => expect(answerChannel).toBeDefined());
+  fireEvent.click(pageButton("History"));
+  act(() => answerChannel!.onmessage({ event: "delta", data: { text: "Paris is the capital of France." } }));
+  fireEvent.click(pageButton("Chat"));
+  const conversation = document.querySelector<HTMLElement>(".conversation")!;
+  expect(conversation.scrollTop).toBe(conversation.scrollHeight);
 });
 
 test("New chat from another page shows an empty Chat and tells Hey Dot to forget it", async () => {
