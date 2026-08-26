@@ -51,6 +51,8 @@ function started(
 
 const newChatButton = () => screen.getByRole("button", { name: "New chat" });
 
+const stopButton = () => screen.getByRole("button", { name: "Stop" }) as HTMLButtonElement;
+
 afterEach(() => {
   cleanup();
   clearMocks();
@@ -336,4 +338,55 @@ test("offers no copy button before any answer text arrives", async () => {
   fireEvent.click(askButton());
   await screen.findByText("On this Mac");
   expect(screen.queryByRole("button", { name: "Copy answer" })).toBeNull();
+});
+
+test("Stop is disabled while no answer is streaming", async () => {
+  await renderPanel();
+  sendPhase({ kind: "ready" });
+  expect(stopButton().disabled).toBe(true);
+});
+
+test("Stop ends a streaming answer and keeps its text so far", async () => {
+  await renderPanel((_question, onEvent) => {
+    onEvent.onmessage({ event: "delta", data: { text: "Par" } });
+    return new Promise(() => {});
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Par")).toBeTruthy();
+  expect(stopButton().disabled).toBe(false);
+  fireEvent.click(stopButton());
+  await waitFor(() => expect(invokedCommands).toContain("stop_answer"));
+  expect(screen.getByText("Par")).toBeTruthy();
+});
+
+test("Stop is disabled again once the answer finishes", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage({ event: "delta", data: { text: "Paris" } });
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Paris")).toBeTruthy();
+  await waitFor(() => expect(stopButton().disabled).toBe(true));
+});
+
+test("an earlier answer ending does not disable Stop for the newer one", async () => {
+  let finishFirstAnswer: () => void = () => {};
+  await renderPanel((question, onEvent) => {
+    if (question === "What is the capital of France?") {
+      return new Promise((resolve) => (finishFirstAnswer = () => resolve()));
+    }
+    onEvent.onmessage({ event: "delta", data: { text: "Madrid" } });
+    return new Promise(() => {});
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is the capital of France?");
+  fireEvent.click(askButton());
+  typeQuestion("And of Spain?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Madrid")).toBeTruthy();
+  await act(async () => finishFirstAnswer());
+  expect(stopButton().disabled).toBe(false);
 });

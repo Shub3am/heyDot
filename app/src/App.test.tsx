@@ -6,7 +6,7 @@ import App from "./App";
 beforeEach(() => mockIPC(() => {}));
 afterEach(() => clearMocks());
 
-test("renders the app name", () => {
+test("opens on the Chat page", () => {
   render(<App />);
-  expect(screen.getByRole("heading", { name: "Hey Dot" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Chat" })).toBeTruthy();
 });
