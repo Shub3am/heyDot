@@ -22,7 +22,8 @@
   margin-bottom: -12px;
 }
 
-.sidebar button {
+.sidebar-new-chat,
+.sidebar-pages button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -60,9 +61,11 @@
   color: var(--accent);
 }
 
+/* ModelStatus.css sizes the status to this container, so the rail needs no rule for it here. */
 .sidebar-status {
   margin-top: auto;
   padding: 0 4px;
+  container-type: inline-size;
 }
 
 .page-area {
@@ -122,25 +125,19 @@
   color: var(--text-secondary);
 }
 
-/* A narrow window keeps every sidebar button as an icon; the model status keeps only its dot. */
+/* A narrow window keeps every sidebar button as an icon. */
 @media (max-width: 719px) {
   .sidebar {
     width: 64px;
   }
 
-  .sidebar button {
+  .sidebar-new-chat,
+  .sidebar-pages button {
     justify-content: center;
     padding: 5px 0;
   }
 
-  .sidebar-label,
-  .sidebar-status button {
+  .sidebar-label {
     display: none;
-  }
-
-  /* The status sentence is bare text beside the dot, so zero font size hides the text and leaves the dot. */
-  .sidebar-status p {
-    font-size: 0;
-    text-align: center;
   }
 }
