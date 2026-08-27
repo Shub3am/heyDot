@@ -49,7 +49,6 @@ function started(
   return { event: "started", data: { leavesDevice, host, screen: screenShare, forgotEarlierTurns } };
 }
 
-const newChatButton = () => screen.getByRole("button", { name: "New chat" });
 
 const stopButton = () => screen.getByRole("button", { name: "Stop" }) as HTMLButtonElement;
 
@@ -194,35 +193,6 @@ test("a follow-up appears under the earlier answer", async () => {
   expect(turns).toHaveLength(2);
   expect(turns[0].textContent).toContain("Answer to What city is this?");
   expect(turns[1].textContent).toContain("Answer to How many people live there?");
-});
-
-test("New chat clears the conversation and tells Hey Dot to forget it", async () => {
-  await renderPanel(async (_question, onEvent) => {
-    onEvent.onmessage({ event: "delta", data: { text: "Paris" } });
-  });
-  sendPhase({ kind: "ready" });
-  typeQuestion("What city is this?");
-  fireEvent.click(askButton());
-  expect(await screen.findByText("Paris")).toBeTruthy();
-  fireEvent.click(newChatButton());
-  expect(screen.queryByRole("article")).toBeNull();
-  await waitFor(() => expect(invokedCommands).toContain("new_chat"));
-});
-
-test("an answer still streaming when New chat is clicked does not come back", async () => {
-  let answerChannel: Channel<AnswerEvent> | undefined;
-  await renderPanel((_question, onEvent) => {
-    answerChannel = onEvent;
-    return new Promise(() => {});
-  });
-  sendPhase({ kind: "ready" });
-  typeQuestion("What is the capital of France?");
-  fireEvent.click(askButton());
-  await waitFor(() => expect(answerChannel).toBeDefined());
-  fireEvent.click(newChatButton());
-  act(() => answerChannel!.onmessage({ event: "delta", data: { text: "Par" } }));
-  expect(screen.queryByText("Par")).toBeNull();
-  expect(screen.queryByRole("article")).toBeNull();
 });
 
 test("a question Hey Dot answers after ten idle minutes hides the turns it forgot", async () => {

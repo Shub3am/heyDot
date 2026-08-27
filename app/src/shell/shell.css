@@ -1,0 +1,117 @@
+/* The frame around the pages: the sidebar, the page area, and the header and card every page uses.
+   Must not style anything inside a page's body. */
+
+.app {
+  display: flex;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 220px;
+  padding: 12px 10px;
+  gap: 12px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.sidebar button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 10px;
+  text-align: left;
+}
+
+.sidebar-new-chat {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 0 0 0.5px var(--border), 0 1px 1px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar-pages button {
+  background: transparent;
+  color: var(--text);
+}
+
+.sidebar-pages button:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.sidebar-pages button[aria-current="page"] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.sidebar-status {
+  margin-top: auto;
+  padding: 0 4px;
+}
+
+.page-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  background: var(--window);
+}
+
+.page-slot {
+  flex: 1;
+  min-height: 0;
+}
+
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.page-card {
+  max-width: 520px;
+  margin: 24px 16px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 0 0 0.5px var(--border), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.page-card h2 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.page-card p {
+  margin: 0 0 8px;
+}
+
+.page-card-today {
+  color: var(--text-secondary);
+}
