@@ -18,7 +18,7 @@ export default function Sidebar({ currentPage, onOpenPage, onNewChat, children }
     <nav className="sidebar" aria-label="Pages">
       {/* The macOS traffic lights sit over this strip, so it holds no controls; dragging it moves the window. */}
       <div className="sidebar-drag-strip" data-tauri-drag-region />
-      <button className="sidebar-new-chat" aria-label="New chat" title="New chat" onClick={onNewChat}>
+      <button className="sidebar-item sidebar-new-chat" aria-label="New chat" title="New chat" onClick={onNewChat}>
         <NewChatIcon />
         <span className="sidebar-label">New chat</span>
       </button>
@@ -28,6 +28,7 @@ export default function Sidebar({ currentPage, onOpenPage, onNewChat, children }
           return (
             <li key={page}>
               <button
+                className="sidebar-item"
                 aria-label={label}
                 title={label}
                 aria-current={page === currentPage ? "page" : undefined}
