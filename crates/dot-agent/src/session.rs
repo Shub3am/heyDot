@@ -21,6 +21,10 @@ pub enum AgentEvent {
     Delta(String),
 }
 
+/// An answer that is now the running one, so Stop, New chat or a newer question can cancel it
+/// before `ask` sends it.
+pub struct RunningAnswer(CancellationToken);
+
 #[derive(Default)]
 pub struct Session {
     history: tokio::sync::Mutex<History>,
@@ -28,15 +32,26 @@ pub struct Session {
 }
 
 impl Session {
-    /// Cancels the running answer at once. The stream ends when this answer is complete, when a
-    /// newer question, `stop_answer` or `new_chat` cancels it, or after the error that stopped it.
+    /// Cancels the running answer and puts a new one in its place. Take it before slow work such
+    /// as the screenshot, so a Stop or New chat during that work cancels this answer.
+    pub fn begin_answer(&self) -> RunningAnswer {
+        let token = CancellationToken::new();
+        let running = std::mem::replace(&mut *self.running_answer.lock().unwrap(), token.clone());
+        running.cancel();
+        RunningAnswer(token)
+    }
+
+    /// Sends the question for `answer`. The stream ends when the answer is complete, when a newer
+    /// question, `stop_answer` or `new_chat` cancels it, or after the error that stopped it. It is
+    /// empty when the answer was cancelled before it was sent.
     pub fn ask<'a>(
         &'a self,
+        answer: RunningAnswer,
         http: &'a reqwest::Client,
         config: &'a ChatConfig,
         input: UserInput,
     ) -> impl Stream<Item = Result<AgentEvent, ProviderError>> + 'a {
-        let cancelled = self.replace_running_answer();
+        let RunningAnswer(cancelled) = answer;
         async_stream::try_stream! {
             let mut history = self.history.lock().await;
             if cancelled.is_cancelled() {
@@ -69,12 +84,5 @@ impl Session {
     pub async fn new_chat(&self) {
         self.running_answer.lock().unwrap().cancel();
         self.history.lock().await.clear();
-    }
-
-    fn replace_running_answer(&self) -> CancellationToken {
-        let token = CancellationToken::new();
-        let running = std::mem::replace(&mut *self.running_answer.lock().unwrap(), token.clone());
-        running.cancel();
-        token
     }
 }

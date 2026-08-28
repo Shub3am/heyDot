@@ -89,8 +89,8 @@ pub fn download_local_model(local_model: State<'_, Arc<LocalModel>>) {
     tauri::async_runtime::spawn(async move { local_model.download().await });
 }
 
-/// Resolves when the answer is complete, or when a newer question or New chat stopped it, so the
-/// panel needs no end-of-answer event.
+/// Resolves when the answer is complete, or when a newer question, Stop or New chat stopped it,
+/// so the panel needs no end-of-answer event.
 #[tauri::command]
 pub async fn ask_text(
     question: String,
@@ -99,6 +99,7 @@ pub async fn ask_text(
     session: State<'_, Session>,
     on_event: Channel<AnswerEvent>,
 ) -> Result<(), String> {
+    let running_answer = session.begin_answer();
     let config = local_model
         .chat_config()
         .await
@@ -115,7 +116,7 @@ pub async fn ask_text(
         text: question,
         jpeg_screenshot: screenshot.ok(),
     };
-    let mut answer = std::pin::pin!(session.ask(&http, &config, input));
+    let mut answer = std::pin::pin!(session.ask(running_answer, &http, &config, input));
     while let Some(event) = answer.next().await {
         let answer_event = match event.map_err(|error| describe_answer_error(&error))? {
             AgentEvent::Thinking {

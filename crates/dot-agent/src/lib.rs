@@ -6,4 +6,4 @@ mod history;
 mod session;
 
 pub use context::UserInput;
-pub use session::{AgentEvent, Session};
+pub use session::{AgentEvent, RunningAnswer, Session};
