@@ -12,7 +12,7 @@ let invokedCommands: string[] = [];
 let statusChannel: Channel<LocalModelStatus> | undefined;
 
 function ChatPanelWithModel() {
-  return <ChatPanel status={useLocalModelStatus()} isVisible />;
+  return <ChatPanel status={useLocalModelStatus()} />;
 }
 
 async function renderPanel(onAsk: AskHandler = async () => {}) {

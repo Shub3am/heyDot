@@ -10,7 +10,7 @@ Entry points:
 - `shell.css`: `.page`, `.page-header` and `.page-card` for any page.
 
 Invariants and gotchas:
-- The Chat page stays mounted on other pages so a streaming answer survives the switch. `App.tsx` hides it with `hidden` on `.page-slot`, which has no display rule; a display rule there would override `hidden` and show both pages.
+- The Chat page stays mounted on other pages so a streaming answer survives the switch. `App.tsx` hides it with `hidden` on `.page-slot`, and `.page-slot[hidden]` keeps its box (so its conversation can still scroll to a growing answer) under the open page with `visibility: hidden`. Any display rule on `.page-slot` must keep that `visibility: hidden`, or both pages show and the hidden one takes clicks.
 - New chat remounts the Chat page through its `key` and calls `newChat`, so a late answer from the old chat has no panel to land in.
 - Every sidebar button carries `aria-label` and `title`, because its text is hidden when the window is narrow enough to show only icons.
 - `aria-current="page"` marks the open page; the CSS keys the highlight off it.

@@ -7,7 +7,7 @@ import { askText, stopAnswer, type LocalModelStatus } from "./ipc";
 import "./chat.css";
 
 /** `status` only decides whether a question can be asked; the sidebar shows it. */
-export default function ChatPanel({ status, isVisible }: { status: LocalModelStatus | null; isVisible: boolean }) {
+export default function ChatPanel({ status }: { status: LocalModelStatus | null }) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [answeringTurnId, setAnsweringTurnId] = useState<number | null>(null);
@@ -16,13 +16,12 @@ export default function ChatPanel({ status, isVisible }: { status: LocalModelSta
   const wasScrolledToBottom = useRef(true);
 
   // Follows a streaming answer only while the user has not scrolled up to read an earlier one.
-  // A hidden page has no height to scroll, so the answer is followed again once the page is shown.
   useLayoutEffect(() => {
     const element = conversation.current!;
-    if (isVisible && wasScrolledToBottom.current) {
+    if (wasScrolledToBottom.current) {
       element.scrollTop = element.scrollHeight;
     }
-  }, [turns, isVisible]);
+  }, [turns]);
 
   function rememberScrollPosition() {
     const element = conversation.current!;

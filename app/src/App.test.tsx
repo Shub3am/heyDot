@@ -89,9 +89,9 @@ test("turns in Chat survive a switch to History and back", async () => {
 });
 
 test("an answer that grows while Chat is hidden is scrolled to its end when Chat opens again", async () => {
-  // jsdom has no layout; like WebKit, a conversation inside a hidden page has no height.
+  // jsdom has no layout. shell.css keeps the hidden Chat page's box, so its conversation still has a height.
   vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
-    return this.closest("[hidden]") ? 0 : this.textContent!.length * 10;
+    return this.textContent!.length * 10;
   });
   const answerChannel = await askWithAnswerStillStreaming("What is the capital of France?");
   fireEvent.click(pageButton("History"));

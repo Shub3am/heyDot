@@ -67,6 +67,7 @@
 }
 
 .page-area {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -77,6 +78,16 @@
 .page-slot {
   flex: 1;
   min-height: 0;
+}
+
+/* `hidden` alone is display: none, which gives the kept-mounted Chat page no height, so its
+   conversation cannot follow an answer that streams while another page is open. This keeps the box,
+   lays it under the open page, and hides it; visibility also keeps it from taking clicks or focus. */
+.page-slot[hidden] {
+  display: block;
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
 }
 
 .page {
