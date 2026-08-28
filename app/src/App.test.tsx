@@ -101,3 +101,10 @@ test("an answer still streaming when New chat is clicked does not come back", as
   expect(screen.queryByText("Par")).toBeNull();
   expect(screen.queryByRole("article")).toBeNull();
 });
+
+test("the top of the sidebar is a window drag strip with no controls in it", async () => {
+  await renderApp();
+  const dragStrip = screen.getByRole("navigation", { name: "Pages" }).firstElementChild!;
+  expect(dragStrip.hasAttribute("data-tauri-drag-region")).toBe(true);
+  expect(dragStrip.children.length).toBe(0);
+});

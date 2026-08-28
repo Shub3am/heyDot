@@ -14,5 +14,8 @@ Invariants and gotchas:
 - New chat remounts the Chat page through its `key` and calls `newChat`, so a late answer from the old chat has no panel to land in.
 - Every sidebar button carries `aria-label` and `title`, because its text is hidden when the window is narrow enough to show only icons.
 - `aria-current="page"` marks the open page; the CSS keys the highlight off it.
+- The sidebar has no background so the window's material shows through; the page area paints its own.
+- The sidebar's first child is the 52 px drag strip under the traffic lights. It must hold no controls, and a bare `data-tauri-drag-region` drags only on direct clicks.
+- Below 720 px the sidebar becomes a 64 px icon rail and the model status shows only its dot, so its Download and Try again buttons hide until the window is wider.
 
 Called by: `src/App.tsx`.
