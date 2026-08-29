@@ -1,4 +1,4 @@
-// Needs a real screen and Screen Recording permission for the terminal, so it is ignored in CI.
+// Needs a real screen and Screen Recording permission for the terminal, so it is ignored by default.
 // Every display this runs on is at least 1600 px on its long edge (any Retina Mac, any 1080p screen).
 
 use std::time::Instant;
