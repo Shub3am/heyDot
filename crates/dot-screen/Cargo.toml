@@ -7,4 +7,6 @@ publish = false
 
 [dependencies]
 image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
+objc2-core-graphics = "0.3.2"
+screencapturekit = { version = "10.0.3", features = ["macos_14_0"] }
 thiserror = "2.0.20"
