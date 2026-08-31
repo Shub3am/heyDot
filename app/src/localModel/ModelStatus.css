@@ -32,3 +32,20 @@
   padding: 1px 10px;
   font-size: 12px;
 }
+
+/* In a slot too narrow for the sentence only the dot stays. The sentence is bare text beside the dot,
+   so zero font size hides the text and leaves the dot. */
+@container (max-width: 100px) {
+  .model-status p {
+    font-size: 0;
+    text-align: center;
+  }
+
+  .model-status p::before {
+    margin-right: 0;
+  }
+
+  .model-status p button {
+    display: none;
+  }
+}
