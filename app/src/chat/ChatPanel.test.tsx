@@ -12,7 +12,7 @@ let invokedCommands: string[] = [];
 let statusChannel: Channel<LocalModelStatus> | undefined;
 
 function ChatPanelWithModel() {
-  return <ChatPanel status={useLocalModelStatus()} />;
+  return <ChatPanel status={useLocalModelStatus()} isVisible />;
 }
 
 async function renderPanel(onAsk: AskHandler = async () => {}) {
@@ -48,7 +48,6 @@ function started(
 ): AnswerEvent {
   return { event: "started", data: { leavesDevice, host, screen: screenShare, forgotEarlierTurns } };
 }
-
 
 const stopButton = () => screen.getByRole("button", { name: "Stop" }) as HTMLButtonElement;
 
