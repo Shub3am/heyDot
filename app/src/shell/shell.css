@@ -22,8 +22,7 @@
   margin-bottom: -12px;
 }
 
-.sidebar-new-chat,
-.sidebar-pages button {
+.sidebar-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -61,7 +60,6 @@
   color: var(--accent);
 }
 
-/* ModelStatus.css sizes the status to this container, so the rail needs no rule for it here. */
 .sidebar-status {
   margin-top: auto;
   padding: 0 4px;
@@ -131,8 +129,7 @@
     width: 64px;
   }
 
-  .sidebar-new-chat,
-  .sidebar-pages button {
+  .sidebar-item {
     justify-content: center;
     padding: 5px 0;
   }

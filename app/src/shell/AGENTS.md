@@ -16,6 +16,6 @@ Invariants and gotchas:
 - `aria-current="page"` marks the open page; the CSS keys the highlight off it.
 - The sidebar has no background so the window's material shows through; the page area paints its own.
 - The sidebar's first child is the 52 px drag strip under the traffic lights. It must hold no controls, and a bare `data-tauri-drag-region` drags only on direct clicks.
-- Below 720 px the sidebar becomes a 64 px icon rail. `.sidebar-status` is a size container, and `localModel/ModelStatus.css` shrinks the status to its dot in it, so its Download and Try again buttons hide until the window is wider. Shell styles only its own buttons, never the ones inside the status slot.
+- Below 720 px the sidebar becomes a 64 px icon rail. `.sidebar-status` is a size container, and the status shrinks itself to fit it (see `src/localModel/AGENTS.md`). Shell styles only its own `.sidebar-item` buttons, never the ones inside the status slot.
 
 Called by: `src/App.tsx`.
