@@ -1,10 +1,10 @@
 # dot-settings
 
-Owns: the user settings file (typed `Settings`, defaults, TOML load and save, format version) and cloud API keys in the macOS Keychain.
+Owns: the user settings file (typed `Settings`, defaults, TOML load and save, format version) and the secrets kept in the macOS Keychain: cloud API keys and the key that encrypts saved chats.
 
 Must not know about: the UI, models, providers, or where the file lives. The caller passes the path; the app uses `~/Library/Application Support/Hey Dot/settings.toml`. Provider ids are opaque strings chosen by the caller.
 
-Entry points: `load_settings(path)`, `save_settings(path, &settings)`, `Settings::default()`; `use_macos_keychain()` once at app start, then `save_api_key` and `read_api_key`.
+Entry points: `load_settings(path)`, `save_settings(path, &settings)`, `Settings::default()`; `use_macos_keychain()` once at app start, then `save_api_key`, `read_api_key` and `read_or_create_history_key`.
 
 Invariants and gotchas:
 - A missing file loads defaults and writes nothing. Saving is the caller's decision.
@@ -15,6 +15,7 @@ Invariants and gotchas:
 - `load_settings` and `save_settings` are blocking (the save waits on F_FULLFSYNC). An async caller runs them in `spawn_blocking`.
 - Hotkey strings use the global-hotkey format (`Alt+Space`); validation happens where the shortcut is registered.
 - API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
+- The saved-chats key is 64 hex characters (32 random bytes), account `history-database-key`. It is created on first read and never rotated: a new key makes every saved chat unreadable.
 - The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised by the tests.
 
-Called by: `app/src-tauri`, which reads `Settings::default()` for the screenshot size. Loading the file and the Keychain come with the settings window.
+Called by: `app/src-tauri`, which reads `Settings::default()` for the screenshot size. The saved-chats key is read when History opens its database. Loading the settings file and the API keys come with the settings window.

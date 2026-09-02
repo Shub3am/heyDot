@@ -3,7 +3,7 @@
 //! Must not log, print or persist a key anywhere; `read_api_key`'s return value is the
 //! only way a key leaves this file.
 
-const KEYCHAIN_SERVICE: &str = "com.shub3am.heydot";
+pub(crate) const KEYCHAIN_SERVICE: &str = "com.shub3am.heydot";
 
 #[derive(Debug, thiserror::Error)]
 #[error("keychain error: {0}")]
