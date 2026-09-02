@@ -19,7 +19,7 @@ export default function ChatPanel({ status, isVisible }: { status: LocalModelSta
   // A hidden page has no height to scroll, so the answer is followed again once the page is shown.
   useLayoutEffect(() => {
     const element = conversation.current!;
-    if (wasScrolledToBottom.current) {
+    if (isVisible && wasScrolledToBottom.current) {
       element.scrollTop = element.scrollHeight;
     }
   }, [turns, isVisible]);
