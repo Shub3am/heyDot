@@ -31,6 +31,18 @@ function ask(question: string) {
   fireEvent.click(screen.getByRole("button", { name: "Ask" }));
 }
 
+/** The answer's channel stays open, as if the model were still streaming. */
+async function askWithAnswerStillStreaming(question: string) {
+  let answerChannel: Channel<AnswerEvent> | undefined;
+  await renderApp((onEvent) => {
+    answerChannel = onEvent;
+    return new Promise(() => {});
+  });
+  ask(question);
+  await waitFor(() => expect(answerChannel).toBeDefined());
+  return answerChannel!;
+}
+
 const pageButton = (label: string) => screen.getByRole("button", { name: label });
 
 afterEach(() => {
@@ -81,15 +93,9 @@ test("an answer that grows while Chat is hidden is scrolled to its end when Chat
   vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(function (this: HTMLElement) {
     return this.closest("[hidden]") ? 0 : this.textContent!.length * 10;
   });
-  let answerChannel: Channel<AnswerEvent> | undefined;
-  await renderApp((onEvent) => {
-    answerChannel = onEvent;
-    return new Promise(() => {});
-  });
-  ask("What is the capital of France?");
-  await waitFor(() => expect(answerChannel).toBeDefined());
+  const answerChannel = await askWithAnswerStillStreaming("What is the capital of France?");
   fireEvent.click(pageButton("History"));
-  act(() => answerChannel!.onmessage({ event: "delta", data: { text: "Paris is the capital of France." } }));
+  act(() => answerChannel.onmessage({ event: "delta", data: { text: "Paris is the capital of France." } }));
   fireEvent.click(pageButton("Chat"));
   const conversation = document.querySelector<HTMLElement>(".conversation")!;
   expect(conversation.scrollTop).toBe(conversation.scrollHeight);
@@ -109,15 +115,9 @@ test("New chat from another page shows an empty Chat and tells Hey Dot to forget
 });
 
 test("an answer still streaming when New chat is clicked does not come back", async () => {
-  let answerChannel: Channel<AnswerEvent> | undefined;
-  await renderApp((onEvent) => {
-    answerChannel = onEvent;
-    return new Promise(() => {});
-  });
-  ask("What is the capital of France?");
-  await waitFor(() => expect(answerChannel).toBeDefined());
+  const answerChannel = await askWithAnswerStillStreaming("What is the capital of France?");
   fireEvent.click(pageButton("New chat"));
-  act(() => answerChannel!.onmessage({ event: "delta", data: { text: "Par" } }));
+  act(() => answerChannel.onmessage({ event: "delta", data: { text: "Par" } }));
   expect(screen.queryByText("Par")).toBeNull();
   expect(screen.queryByRole("article")).toBeNull();
 });
