@@ -10,6 +10,7 @@ Local-first voice and screen assistant for macOS (Windows later). Rust core, Tau
 - `crates/dot-runtime/`: supervised llama-server process. See `crates/dot-runtime/AGENTS.md`.
 - `crates/dot-providers/`: streaming client for OpenAI-compatible chat endpoints. See `crates/dot-providers/AGENTS.md`.
 - `crates/dot-agent/`: one conversation: remembered turns, the request built from them, one answer in flight. See `crates/dot-agent/AGENTS.md`.
+- `crates/dot-history/`: saved chats in an encrypted SQLite file, opt-in. See `crates/dot-history/AGENTS.md`.
 - `crates/dot-screen/`: screenshot of the display under the cursor, as JPEG. See `crates/dot-screen/AGENTS.md`.
 - `scripts/build-llama-server.sh`: builds the pinned llama-server the app bundles, plus its licenses.
 - `site/`: marketing landing page (Vite + React). `vercel.json` at the root turns off Vercel deploys on push. Independent of the app.
