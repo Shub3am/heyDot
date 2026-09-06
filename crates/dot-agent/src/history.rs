@@ -1,11 +1,11 @@
-//! The turns a session remembers and when it forgets them: past ten turns, after ten idle minutes, on New chat.
+//! The turns a session remembers and when it forgets them: past ten turns, after ten idle minutes, on New chat or a reopened saved chat.
 //! Must not build requests or talk to the model; context.rs and session.rs do.
 
 use std::time::{Duration, SystemTime};
 
 use dot_providers::ChatMessage;
 
-use crate::context::{Turn, UserInput, build_messages};
+use crate::context::{PastTurn, UserInput, build_messages};
 
 /// Counts the new question, so a request carries at most nine earlier turns.
 const MAX_TURNS: usize = 10;
@@ -13,7 +13,7 @@ const IDLE_RESET: Duration = Duration::from_secs(10 * 60);
 
 #[derive(Debug, Default)]
 pub(crate) struct History {
-    turns: Vec<Turn>,
+    turns: Vec<PastTurn>,
     last_asked: Option<SystemTime>,
 }
 
@@ -38,7 +38,7 @@ impl History {
         self.turns.retain(|turn| !turn.answer.is_empty());
         let excess = self.turns.len().saturating_sub(MAX_TURNS - 1);
         self.turns.drain(..excess);
-        let running_turn = Turn {
+        let running_turn = PastTurn {
             question: input.text.clone(),
             had_screenshot: input.jpeg_screenshot.is_some(),
             answer: String::new(),
@@ -65,6 +65,17 @@ impl History {
 
     pub(crate) fn clear(&mut self) {
         *self = Self::default();
+    }
+
+    /// Replaces every turn with the last nine of `past_turns`. The idle clock starts at the next
+    /// question, so a chat reopened days later is not forgotten on its first follow-up.
+    pub(crate) fn resume(&mut self, mut past_turns: Vec<PastTurn>) {
+        let excess = past_turns.len().saturating_sub(MAX_TURNS - 1);
+        past_turns.drain(..excess);
+        *self = History {
+            turns: past_turns,
+            last_asked: None,
+        };
     }
 }
 

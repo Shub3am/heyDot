@@ -14,15 +14,15 @@ pub(crate) const SYSTEM_PROMPT: &str = "You are Hey Dot, an assistant on the use
 
 const EARLIER_SCREENSHOT_NOTE: &str = "[screenshot from earlier turn]";
 
-/// A question already sent. Its screenshot is never kept, only whether it had one.
+/// A question already sent and its answer. Its screenshot is never kept, only whether it had one.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Turn {
-    pub(crate) question: String,
-    pub(crate) had_screenshot: bool,
-    pub(crate) answer: String,
+pub struct PastTurn {
+    pub question: String,
+    pub had_screenshot: bool,
+    pub answer: String,
 }
 
-pub(crate) fn build_messages(earlier: &[Turn], input: UserInput) -> Vec<ChatMessage> {
+pub(crate) fn build_messages(earlier: &[PastTurn], input: UserInput) -> Vec<ChatMessage> {
     let mut messages = vec![ChatMessage {
         role: ChatRole::System,
         text: SYSTEM_PROMPT.to_owned(),
@@ -58,8 +58,8 @@ pub(crate) fn build_messages(earlier: &[Turn], input: UserInput) -> Vec<ChatMess
 mod tests {
     use super::*;
 
-    fn earlier_turn(question: &str, had_screenshot: bool, answer: &str) -> Turn {
-        Turn {
+    fn earlier_turn(question: &str, had_screenshot: bool, answer: &str) -> PastTurn {
+        PastTurn {
             question: question.to_owned(),
             had_screenshot,
             answer: answer.to_owned(),

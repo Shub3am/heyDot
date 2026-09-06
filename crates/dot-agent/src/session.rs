@@ -8,7 +8,7 @@ use dot_providers::{ChatConfig, ProviderError, stream_chat};
 use futures_util::{Stream, StreamExt};
 use tokio_util::sync::CancellationToken;
 
-use crate::context::UserInput;
+use crate::context::{PastTurn, UserInput};
 use crate::history::History;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,5 +84,11 @@ impl Session {
     pub async fn new_chat(&self) {
         self.running_answer.lock().unwrap().cancel();
         self.history.lock().await.clear();
+    }
+
+    /// Stops the running answer, then continues a saved chat: `past_turns` replace every turn.
+    pub async fn resume(&self, past_turns: Vec<PastTurn>) {
+        self.running_answer.lock().unwrap().cancel();
+        self.history.lock().await.resume(past_turns);
     }
 }
