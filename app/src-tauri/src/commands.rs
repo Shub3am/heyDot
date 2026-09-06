@@ -121,6 +121,7 @@ pub async fn ask_text(
         let answer_event = match event.map_err(|error| describe_answer_error(&error))? {
             AgentEvent::Thinking {
                 forgot_earlier_turns,
+                ..
             } => AnswerEvent::Started {
                 leaves_device: config.leaves_device(),
                 host: config.base_url.host_str().unwrap_or_default().to_owned(),
