@@ -33,4 +33,4 @@ Invariants and gotchas:
 - Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
 - Which local model runs is `pick_local_model(recommend(hardware))` until onboarding lets the user choose.
 
-Called by: the user (launching the app) and CI (`.github/workflows/ci.yml`).
+Called by: the user (launching the app).

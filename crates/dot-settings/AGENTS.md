@@ -15,6 +15,6 @@ Invariants and gotchas:
 - `load_settings` and `save_settings` are blocking (the save waits on F_FULLFSYNC). An async caller runs them in `spawn_blocking`.
 - Hotkey strings use the global-hotkey format (`Alt+Space`); validation happens where the shortcut is registered.
 - API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
-- The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised in CI.
+- The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised by the tests.
 
 Called by: `app/src-tauri`, which reads `Settings::default()` for the screenshot size. Loading the file and the Keychain come with the settings window.
