@@ -17,4 +17,4 @@ Invariants and gotchas:
 - API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
 - The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised in CI.
 
-Called by: `app/src-tauri` (from Phase 1 step 3 on).
+Called by: `app/src-tauri`, which reads `Settings::default()` for the screenshot size (from Phase 1 step 4). Loading the file and the Keychain come with the settings window.

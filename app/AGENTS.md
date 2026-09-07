@@ -13,7 +13,11 @@ Invariants and gotchas:
 - `scripts/build-llama-server.sh` must have run before any cargo command on `hey-dot`: tauri-build fails the build while `src-tauri/binaries/llama-server-<target triple>` or `src-tauri/licenses/llama.cpp/` is missing. Both folders are git-ignored build output.
 - The bundled llama-server sits next to the app's executable (`Contents/MacOS/` in the bundle, `target/debug/` in `tauri dev`), which is how `lib.rs` finds it.
 - `RunEvent::Exit` stops llama-server with `block_on`: Tauri ends with `process::exit`, which skips destructors, so `kill_on_drop` alone never fires.
-- The `AnswerEvent` and `LocalModelStatus` serde shapes are a contract with `src/chat/ipc.ts`; the serialization tests in `commands.rs` and `local_model.rs` pin them.
+- The `AnswerEvent` (with `ScreenShare`) and `LocalModelStatus` serde shapes are a contract with `src/chat/ipc.ts`; the serialization tests in `commands.rs` and `local_model.rs` pin them.
+- `ask_text` captures the display under the cursor before it answers. A failed capture never fails the question: the answer comes text-only and `ScreenShare` tells the panel why.
+- The screenshot size is `Settings::default().screenshot_max_edge_px` until the settings file is loaded at startup (settings window, Phase 1 step 8).
+- `build.rs` adds `-rpath /usr/lib/swift` for dot-screen's Swift bridge; without it the app aborts at launch on `libswift_Concurrency.dylib`.
+- Minimum macOS is 14.0 (`bundle.macOS.minimumSystemVersion`) because dot-screen uses `SCScreenshotManager`. Screen Recording permission belongs to `com.shub3am.heydot` in a bundle and to the terminal under `tauri dev`.
 - Two HTTP clients: downloads follow the system proxy, while `local_model_http_client()` (managed state, used by `ask_text`) skips it so prompts and the llama-server key never reach a proxy. `tests/local_model_http_client.rs` pins it.
 - Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
 - Which local model runs is `pick_local_model(recommend(hardware))` until onboarding lets the user choose.
