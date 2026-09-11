@@ -1,5 +1,5 @@
 //! The IPC commands the chat panel calls.
-//! Must not hold state: everything lives in the managed `LocalModel`, `Session` and HTTP client.
+//! Must not hold state: everything lives in the managed `LocalModel`, `Session`, `SavedChats` and HTTP client.
 
 use std::sync::Arc;
 
@@ -13,6 +13,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use crate::local_model::{LocalModel, LocalModelStatus};
+use crate::saved_chats::SavedChats;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(
@@ -97,6 +98,7 @@ pub async fn ask_text(
     local_model: State<'_, Arc<LocalModel>>,
     http: State<'_, reqwest::Client>,
     session: State<'_, Session>,
+    saved_chats: State<'_, SavedChats>,
     on_event: Channel<AnswerEvent>,
 ) -> Result<(), String> {
     let running_answer = session.begin_answer();
@@ -112,29 +114,57 @@ pub async fn ask_text(
     .await
     .map_err(|error| error.to_string())?;
     let screen = screen_share_of(&screenshot);
+    let jpeg_screenshot = screenshot.ok();
+    let had_screenshot = jpeg_screenshot.is_some();
     let input = UserInput {
-        text: question,
-        jpeg_screenshot: screenshot.ok(),
+        text: question.clone(),
+        jpeg_screenshot,
     };
+    let mut saved_turn = None;
+    let mut answer_text = String::new();
     let mut answer = std::pin::pin!(session.ask(running_answer, &http, &config, input));
-    while let Some(event) = answer.next().await {
-        let answer_event = match event.map_err(|error| describe_answer_error(&error))? {
+    // A failed answer is forgotten, as dot-agent forgets it. A stopped one or one the panel stopped
+    // listening to keeps its partial text, as dot-agent keeps it.
+    let outcome = loop {
+        let Some(event) = answer.next().await else {
+            break Ok(());
+        };
+        let event = match event {
+            Ok(event) => event,
+            Err(error) => {
+                if let Some(turn) = saved_turn.take() {
+                    saved_chats.forget_question(turn);
+                }
+                break Err(describe_answer_error(&error));
+            }
+        };
+        let answer_event = match event {
             AgentEvent::Thinking {
                 forgot_earlier_turns,
-                ..
-            } => AnswerEvent::Started {
-                leaves_device: config.leaves_device(),
-                host: config.base_url.host_str().unwrap_or_default().to_owned(),
-                screen: screen.clone(),
-                forgot_earlier_turns,
-            },
-            AgentEvent::Delta(text) => AnswerEvent::Delta { text },
+                starts_conversation,
+            } => {
+                saved_turn =
+                    saved_chats.record_question(&question, had_screenshot, starts_conversation);
+                AnswerEvent::Started {
+                    leaves_device: config.leaves_device(),
+                    host: config.base_url.host_str().unwrap_or_default().to_owned(),
+                    screen: screen.clone(),
+                    forgot_earlier_turns,
+                }
+            }
+            AgentEvent::Delta(text) => {
+                answer_text.push_str(&text);
+                AnswerEvent::Delta { text }
+            }
         };
-        on_event
-            .send(answer_event)
-            .map_err(|error| error.to_string())?;
+        if let Err(error) = on_event.send(answer_event) {
+            break Err(error.to_string());
+        }
+    };
+    if let Some(turn) = saved_turn {
+        saved_chats.record_answer(turn, &answer_text);
     }
-    Ok(())
+    outcome
 }
 
 /// Stops the running answer; the next question still follows up on it.
