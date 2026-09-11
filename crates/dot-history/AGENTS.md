@@ -11,6 +11,7 @@ Invariants and gotchas:
 - The key is applied raw (`x'<hex>'`), so SQLCipher skips PBKDF2. It is validated as 64 hex characters before it reaches SQL, and before the file is created.
 - A wrong key shows up on the first read as SQLITE_NOTADB and is returned as `WrongKey`. There is no recovery: a lost key means the chats are gone.
 - A question is written before its answer exists. A turn with an empty answer (the app quit mid-answer) is hidden from lists and loads, and a chat with no answered turn is not listed.
+- `save_answer` and `delete_turn` on a turn already deleted with its chat do nothing and succeed: the page can delete a chat while its answer is still running.
 - A chat's title and date are derived from its answered turns: the first question, and when the latest was asked. Nothing stores them separately.
 - Ids use AUTOINCREMENT so a deleted chat's id is never reused: the app and the page hold ids across deletes.
 - `secure_delete` is on, so deleted text is overwritten in the file.
