@@ -3,15 +3,35 @@
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import ChatTurn, { type Turn } from "./ChatTurn";
-import { askText, stopAnswer, type LocalModelStatus } from "./ipc";
+import { askText, stopAnswer, type LocalModelStatus, type SavedTurnRow } from "./ipc";
 import "./chat.css";
 
-/** `status` only decides whether a question can be asked; the sidebar shows it. */
-export default function ChatPanel({ status }: { status: LocalModelStatus | null }) {
+function turnsOfSavedChat(savedTurns: SavedTurnRow[]): Turn[] {
+  return savedTurns.map((savedTurn, index) => ({
+    id: index,
+    question: savedTurn.question,
+    text: savedTurn.answer,
+    badge: null,
+    screen: savedTurn.hadScreenshot ? { kind: "attached" } : null,
+    error: null,
+  }));
+}
+
+/**
+ * `status` only decides whether a question can be asked; the sidebar shows it.
+ * `savedTurns` is a reopened saved chat, read once when the panel mounts.
+ */
+export default function ChatPanel({
+  status,
+  savedTurns = [],
+}: {
+  status: LocalModelStatus | null;
+  savedTurns?: SavedTurnRow[];
+}) {
   const [question, setQuestion] = useState("");
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const [turns, setTurns] = useState(() => turnsOfSavedChat(savedTurns));
   const [answeringTurnId, setAnsweringTurnId] = useState<number | null>(null);
-  const nextTurnId = useRef(0);
+  const nextTurnId = useRef(savedTurns.length);
   const conversation = useRef<HTMLDivElement>(null);
   const wasScrolledToBottom = useRef(true);
 

@@ -4,18 +4,18 @@ import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, expect, test, vi } from "vitest";
 import useLocalModelStatus from "../localModel/useLocalModelStatus";
 import ChatPanel from "./ChatPanel";
-import type { AnswerEvent, LocalModelPhase, LocalModelStatus, ScreenShare } from "./ipc";
+import type { AnswerEvent, LocalModelPhase, LocalModelStatus, SavedTurnRow, ScreenShare } from "./ipc";
 
 type AskHandler = (question: string, onEvent: Channel<AnswerEvent>) => Promise<void>;
 
 let invokedCommands: string[] = [];
 let statusChannel: Channel<LocalModelStatus> | undefined;
 
-function ChatPanelWithModel() {
-  return <ChatPanel status={useLocalModelStatus()} />;
+function ChatPanelWithModel({ savedTurns }: { savedTurns: SavedTurnRow[] }) {
+  return <ChatPanel status={useLocalModelStatus()} savedTurns={savedTurns} />;
 }
 
-async function renderPanel(onAsk: AskHandler = async () => {}) {
+async function renderPanel(onAsk: AskHandler = async () => {}, savedTurns: SavedTurnRow[] = []) {
   mockIPC((command, args) => {
     invokedCommands.push(command);
     const namedArgs = args as Record<string, unknown>;
@@ -26,7 +26,7 @@ async function renderPanel(onAsk: AskHandler = async () => {}) {
       return onAsk(namedArgs.question as string, namedArgs.onEvent as Channel<AnswerEvent>);
     }
   });
-  render(<ChatPanelWithModel />);
+  render(<ChatPanelWithModel savedTurns={savedTurns} />);
   await waitFor(() => expect(statusChannel).toBeDefined());
 }
 
@@ -192,6 +192,31 @@ test("a follow-up appears under the earlier answer", async () => {
   expect(turns).toHaveLength(2);
   expect(turns[0].textContent).toContain("Answer to What city is this?");
   expect(turns[1].textContent).toContain("Answer to How many people live there?");
+});
+
+test("a reopened saved chat shows its turns and takes a follow-up under them", async () => {
+  await renderPanel(
+    async (question, onEvent) => {
+      onEvent.onmessage(started({ kind: "attached" }));
+      onEvent.onmessage({ event: "delta", data: { text: `Answer to ${question}` } });
+    },
+    [
+      { question: "What city is this?", hadScreenshot: true, answer: "Paris." },
+      { question: "Is it big?", hadScreenshot: false, answer: "Yes." },
+    ],
+  );
+  const savedTurns = screen.getAllByRole("article");
+  expect(savedTurns).toHaveLength(2);
+  expect(savedTurns[0].textContent).toContain("Paris.");
+  expect(savedTurns[0].textContent).toContain("With a screenshot of this screen");
+  expect(savedTurns[1].textContent).not.toContain("With a screenshot");
+  sendPhase({ kind: "ready" });
+  typeQuestion("How old is it?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("Answer to How old is it?")).toBeTruthy();
+  const turns = screen.getAllByRole("article");
+  expect(turns).toHaveLength(3);
+  expect(turns[2].textContent).toContain("Answer to How old is it?");
 });
 
 test("a question Hey Dot answers after ten idle minutes hides the turns it forgot", async () => {
