@@ -176,25 +176,9 @@
   color: var(--text-secondary);
 }
 
-.notice,
-.error {
-  margin: 6px 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-
-.notice {
-  background: var(--notice-surface);
-}
-
 .notice button {
   display: block;
   margin-top: 6px;
-}
-
-.error {
-  background: var(--error-surface);
 }
 
 .composer {

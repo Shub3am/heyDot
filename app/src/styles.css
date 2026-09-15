@@ -97,8 +97,29 @@ button.secondary {
   box-shadow: 0 0 0 0.5px var(--border), 0 1px 1px rgba(0, 0, 0, 0.06);
 }
 
+button.destructive {
+  background: var(--failed);
+}
+
 button:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+input:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 1px;
+}
+
+.notice,
+.error {
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.notice {
+  background: var(--notice-surface);
+}
+
+.error {
+  background: var(--error-surface);
 }
