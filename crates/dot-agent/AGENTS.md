@@ -9,6 +9,7 @@ Entry points:
 - `Session::ask(RunningAnswer, &client, &config, UserInput)`: a stream of `AgentEvent`s. It ends when the answer is complete or cancelled, or after an `Err(ProviderError)` item.
 - `Session::stop_answer()`: ends the running answer early and keeps the conversation.
 - `Session::new_chat()`.
+- `Session::resume(Vec<PastTurn>)`: continues a saved chat. It stops the running answer and replaces every turn with the last nine given.
 
 Invariants and gotchas:
 - The spec's `Done` is the end of the stream, and its `Error(kind)` is an `Err(ProviderError)` item.
@@ -18,6 +19,7 @@ Invariants and gotchas:
 - A cancelled answer stays in history with its text so far. A failed answer is discarded. A question with no answer text is forgotten when the next question starts.
 - The history lock is held for a whole answer, so `new_chat` waits until the running answer notices its cancellation. A consumer that stops polling a stream without dropping it blocks every later question.
 - `begin_answer` cancels the running answer at once. Call it before slow work such as the screenshot, so Stop or New chat during that work cancel this answer. An answer cancelled before it gets the lock yields nothing at all and never reaches the model.
+- A resumed conversation starts its idle clock at the next question, so a chat reopened days later keeps its turns for the first follow-up. Saving turns is the caller's job; this crate never persists anything.
 - A context overflow is not trimmed: the request fails with `ContextTooLong`, and the user starts a new chat.
 
-Called by: `app/src-tauri` (the `ask_text`, `stop_answer` and `new_chat` commands) and `crates/dot-runtime`'s ignored real-model test.
+Called by: `app/src-tauri` (the `ask_text`, `stop_answer`, `new_chat` and `open_saved_chat` commands) and `crates/dot-runtime`'s ignored real-model test.

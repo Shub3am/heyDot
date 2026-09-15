@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use dot_agent::{AgentEvent, Session, UserInput};
+use dot_agent::{AgentEvent, PastTurn, Session, UserInput};
 use dot_providers::{ChatConfig, ProviderError};
 use futures_util::StreamExt;
 use serde_json::json;
@@ -376,4 +376,79 @@ async fn new_chat_before_the_question_is_sent_keeps_it_out_of_the_new_chat() {
 
     assert!(events.is_empty());
     assert_eq!(last_request_messages(&second_server).await.len(), 2);
+}
+
+fn past_turn(question: &str, had_screenshot: bool, answer: &str) -> PastTurn {
+    PastTurn {
+        question: question.to_owned(),
+        had_screenshot,
+        answer: answer.to_owned(),
+    }
+}
+
+#[tokio::test]
+async fn resume_replaces_the_conversation_with_the_saved_turns() {
+    let server = server_answering(&["Paris"]).await;
+    let config = config_for(server.uri());
+    let session = Session::default();
+    answer_events(&session, &config, question("Forget this")).await;
+
+    session
+        .resume(vec![past_turn("What is this chart?", true, "Revenue.")])
+        .await;
+    answer_events(&session, &config, question("And the red line?")).await;
+
+    let messages = last_request_messages(&server).await;
+    assert_eq!(messages.len(), 4);
+    assert_eq!(
+        messages[1]["content"],
+        json!([{"type": "text", "text": "What is this chart?\n[screenshot from earlier turn]"}])
+    );
+    assert_eq!(
+        messages[2]["content"],
+        json!([{"type": "text", "text": "Revenue."}])
+    );
+}
+
+#[tokio::test]
+async fn resume_keeps_only_the_last_nine_saved_turns() {
+    let server = server_answering(&["ok"]).await;
+    let config = config_for(server.uri());
+    let session = Session::default();
+    let saved_turns = (1..=12)
+        .map(|number| past_turn(&format!("question {number}"), false, "answer"))
+        .collect();
+
+    session.resume(saved_turns).await;
+    answer_events(&session, &config, question("question 13")).await;
+
+    let messages = last_request_messages(&server).await;
+    assert_eq!(messages.len(), 1 + 9 * 2 + 1);
+    assert_eq!(
+        messages[1]["content"],
+        json!([{"type": "text", "text": "question 4"}])
+    );
+}
+
+#[tokio::test]
+async fn resume_stops_the_running_answer() {
+    let stalled = stalled_server().await;
+    let session = Session::default();
+    let http = reqwest::Client::new();
+    let mut first = std::pin::pin!(session.ask(
+        session.begin_answer(),
+        &http,
+        &stalled,
+        question("What is the capital of France?")
+    ));
+    first.next().await;
+    first.next().await;
+
+    let (rest_of_first, ()) = tokio::time::timeout(Duration::from_secs(5), async {
+        tokio::join!(first.collect::<Vec<_>>(), session.resume(Vec::new()))
+    })
+    .await
+    .expect("Opening a saved chat did not stop the running answer");
+
+    assert!(rest_of_first.is_empty());
 }

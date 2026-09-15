@@ -5,5 +5,5 @@ mod context;
 mod history;
 mod session;
 
-pub use context::UserInput;
+pub use context::{PastTurn, UserInput};
 pub use session::{AgentEvent, RunningAnswer, Session};
