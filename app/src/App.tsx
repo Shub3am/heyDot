@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ChatPanel from "./chat/ChatPanel";
-import { newChat } from "./chat/ipc";
+import { newChat, type SavedTurnRow } from "./chat/ipc";
 import DocumentsPage from "./documents/DocumentsPage";
 import HistoryPage from "./history/HistoryPage";
 import ModelStatus from "./localModel/ModelStatus";
@@ -12,12 +12,17 @@ import Sidebar from "./shell/Sidebar";
 function App() {
   const localModelStatus = useLocalModelStatus();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
-  const [chatKey, setChatKey] = useState(0);
+  const [shownChat, setShownChat] = useState({ key: 0, savedTurns: [] as SavedTurnRow[] });
 
-  // A new key remounts the Chat page with no turns, and newChat tells the backend to forget the conversation.
-  function startNewChat() {
+  // A new key remounts the Chat page, which reads savedTurns only when it mounts.
+  function showChat(savedTurns: SavedTurnRow[]) {
     setCurrentPage("chat");
-    setChatKey((key) => key + 1);
+    setShownChat((chat) => ({ key: chat.key + 1, savedTurns }));
+  }
+
+  // newChat tells the backend to forget the conversation; open_saved_chat already resumed a saved one.
+  function startNewChat() {
+    showChat([]);
     void newChat();
   }
 
@@ -29,9 +34,9 @@ function App() {
       <main className="page-area">
         {/* Chat stays mounted on other pages so a running answer and its turns survive the switch. */}
         <div className="page-slot" hidden={currentPage !== "chat"}>
-          <ChatPanel key={chatKey} status={localModelStatus} />
+          <ChatPanel key={shownChat.key} status={localModelStatus} savedTurns={shownChat.savedTurns} />
         </div>
-        {currentPage === "history" && <HistoryPage />}
+        {currentPage === "history" && <HistoryPage onOpenChat={showChat} />}
         {currentPage === "documents" && <DocumentsPage />}
         {currentPage === "settings" && <SettingsPage />}
       </main>
