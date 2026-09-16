@@ -20,6 +20,7 @@ pub(crate) struct History {
 pub(crate) struct StartedTurn {
     pub(crate) messages: Vec<ChatMessage>,
     pub(crate) forgot_earlier_turns: bool,
+    pub(crate) starts_conversation: bool,
 }
 
 impl History {
@@ -43,11 +44,13 @@ impl History {
             had_screenshot: input.jpeg_screenshot.is_some(),
             answer: String::new(),
         };
+        let starts_conversation = self.turns.is_empty();
         let messages = build_messages(&self.turns, input);
         self.turns.push(running_turn);
         StartedTurn {
             messages,
             forgot_earlier_turns,
+            starts_conversation,
         }
     }
 
@@ -204,6 +207,48 @@ mod tests {
     }
 
     #[test]
+    fn only_a_question_with_no_earlier_turn_starts_a_conversation() {
+        let mut history = History::default();
+        let start = SystemTime::now();
+
+        let first = ask_and_answer(&mut history, "question 1", start);
+        let follow_up = ask_and_answer(&mut history, "question 2", start + Duration::from_secs(1));
+        let after_idle =
+            history.start_turn(question("question 3"), start + Duration::from_secs(601));
+
+        assert!(first.starts_conversation);
+        assert!(!follow_up.starts_conversation);
+        assert!(after_idle.starts_conversation);
+    }
+
+    #[test]
+    fn a_question_after_a_lone_failed_one_starts_a_conversation() {
+        let mut history = History::default();
+        let start = SystemTime::now();
+        history.start_turn(question("Failed"), start);
+        history.discard_running_turn();
+
+        let started = history.start_turn(question("Again"), start + Duration::from_secs(1));
+
+        assert!(started.starts_conversation);
+    }
+
+    #[test]
+    fn a_resumed_chat_continues_its_conversation() {
+        let mut history = History::default();
+        history.resume(vec![PastTurn {
+            question: "Saved".to_owned(),
+            had_screenshot: false,
+            answer: "Yes".to_owned(),
+        }]);
+
+        let started = history.start_turn(question("Follow up"), SystemTime::now());
+
+        assert!(!started.starts_conversation);
+        assert_eq!(started.messages.len(), 4);
+    }
+
+    #[test]
     fn clear_forgets_every_turn() {
         let mut history = History::default();
         let start = SystemTime::now();
@@ -214,5 +259,6 @@ mod tests {
 
         assert_eq!(started.messages.len(), 2);
         assert!(!started.forgot_earlier_turns);
+        assert!(started.starts_conversation);
     }
 }

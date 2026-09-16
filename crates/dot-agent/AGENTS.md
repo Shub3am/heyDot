@@ -16,6 +16,7 @@ Invariants and gotchas:
 - "Last 10 turns" counts the new question, so a request carries at most nine earlier turns.
 - Only the new question carries an image. An earlier question that had one ends with "[screenshot from earlier turn]" on its own line. Screenshots are never stored.
 - Ten idle minutes of wall-clock time, counted from the last question and including time the Mac slept, forget every turn. A clock set back counts as no idle time. The next `Thinking` then says `forgot_earlier_turns: true`, so the UI can drop them too.
+- `Thinking` says `starts_conversation: true` when no earlier turn goes with the question. It is decided under the conversation lock, so a caller that saves chats starts a new one exactly where the model's context starts over, even when New chat races a question.
 - A cancelled answer stays in history with its text so far. A failed answer is discarded. A question with no answer text is forgotten when the next question starts.
 - The history lock is held for a whole answer, so `new_chat` waits until the running answer notices its cancellation. A consumer that stops polling a stream without dropping it blocks every later question.
 - `begin_answer` cancels the running answer at once. Call it before slow work such as the screenshot, so Stop or New chat during that work cancel this answer. An answer cancelled before it gets the lock yields nothing at all and never reaches the model.

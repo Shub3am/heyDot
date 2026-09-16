@@ -14,9 +14,12 @@ use crate::history::History;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AgentEvent {
     /// The question is on its way to the model. `forgot_earlier_turns` is true when ten idle
-    /// minutes reset the conversation before it.
+    /// minutes reset the conversation before it. `starts_conversation` is true when no earlier
+    /// turn goes with it: the first question, after New chat, after ten idle minutes, or when every
+    /// earlier turn was dropped for having no answer.
     Thinking {
         forgot_earlier_turns: bool,
+        starts_conversation: bool,
     },
     Delta(String),
 }
@@ -58,7 +61,10 @@ impl Session {
                 return;
             }
             let turn = history.start_turn(input, SystemTime::now());
-            yield AgentEvent::Thinking { forgot_earlier_turns: turn.forgot_earlier_turns };
+            yield AgentEvent::Thinking {
+                forgot_earlier_turns: turn.forgot_earlier_turns,
+                starts_conversation: turn.starts_conversation,
+            };
             let mut answer = std::pin::pin!(stream_chat(http, config, &turn.messages));
             while let Some(delta) = cancelled.run_until_cancelled(answer.next()).await.flatten() {
                 match delta {

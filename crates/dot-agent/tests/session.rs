@@ -117,7 +117,8 @@ async fn streams_thinking_then_the_answer_text() {
         events,
         [
             Ok(AgentEvent::Thinking {
-                forgot_earlier_turns: false
+                forgot_earlier_turns: false,
+                starts_conversation: true,
             }),
             Ok(AgentEvent::Delta("Par".to_owned())),
             Ok(AgentEvent::Delta("is".to_owned())),
@@ -237,7 +238,8 @@ async fn a_new_question_stops_the_running_answer_and_keeps_its_text_so_far() {
     assert_eq!(
         first.next().await,
         Some(Ok(AgentEvent::Thinking {
-            forgot_earlier_turns: false
+            forgot_earlier_turns: false,
+            starts_conversation: true,
         }))
     );
     assert_eq!(
