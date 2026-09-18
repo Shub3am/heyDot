@@ -144,6 +144,20 @@ fn deleting_a_turn_that_leaves_its_chat_empty_deletes_the_chat() {
 }
 
 #[test]
+fn a_turn_already_deleted_with_its_chat_is_ignored() {
+    let folder = tempfile::tempdir().unwrap();
+    let store = open_store(&folder);
+    let chat = store.start_chat().unwrap();
+    let unanswered = store.add_question(chat, "Asked", false, 10).unwrap();
+    store.delete_all_chats().unwrap();
+
+    store.save_answer(unanswered, "Late answer").unwrap();
+    store.delete_turn(unanswered).unwrap();
+
+    assert!(store.list_chats("").unwrap().is_empty());
+}
+
+#[test]
 fn deleting_a_turn_keeps_the_rest_of_its_chat() {
     let folder = tempfile::tempdir().unwrap();
     let store = open_store(&folder);

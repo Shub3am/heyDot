@@ -1,7 +1,7 @@
 //! Writing, listing, searching and deleting saved chats and their turns.
 //! Must not keep screenshots: a turn only records whether one went along.
 
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
 
 use crate::{HistoryError, HistoryStore};
 
@@ -62,12 +62,19 @@ impl HistoryStore {
     }
 
     /// For a question that got no answer. Its chat goes too when nothing else is left in it.
+    /// A turn already deleted with its chat is ignored, like `save_answer` ignores it.
     pub fn delete_turn(&self, turn: TurnId) -> Result<(), HistoryError> {
-        let chat: i64 = self.connection.query_row(
-            "DELETE FROM turns WHERE id = ?1 RETURNING chat_id",
-            [turn.0],
-            |row| row.get(0),
-        )?;
+        let Some(chat) = self
+            .connection
+            .query_row(
+                "DELETE FROM turns WHERE id = ?1 RETURNING chat_id",
+                [turn.0],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()?
+        else {
+            return Ok(());
+        };
         self.connection.execute(
             "DELETE FROM chats WHERE id = ?1 AND NOT EXISTS (SELECT 1 FROM turns WHERE chat_id = ?1)",
             [chat],
