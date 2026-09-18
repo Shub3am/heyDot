@@ -4,7 +4,7 @@ Owns: the Tauri shell (`src-tauri/`) and the React UI (`src/`). Windows, tray, h
 
 Must not know about: model formats, audio processing, provider HTTP details. Those belong in `crates/` and are called from `src-tauri` only.
 
-Entry points: `src-tauri/src/main.rs` -> `hey_dot_lib::run()` in `src-tauri/src/lib.rs`; UI starts at `src/main.tsx`. IPC commands live in `src-tauri/src/commands.rs` and their TypeScript mirror in `src/chat/ipc.ts`.
+Entry points: `src-tauri/src/main.rs` -> `hey_dot_lib::run()` in `src-tauri/src/lib.rs`; UI starts at `src/main.tsx`. IPC commands live in `src-tauri/src/commands.rs` (chat) and `src-tauri/src/history_commands.rs` (History page), and their TypeScript mirror in `src/chat/ipc.ts`.
 
 UI modules under `src/`, each with its own AGENTS.md where it has one:
 - `shell/`: the sidebar and the frame every page sits in. See `src/shell/AGENTS.md`.
@@ -22,6 +22,11 @@ Invariants and gotchas:
 - The `AnswerEvent` (with `ScreenShare`) and `LocalModelStatus` serde shapes are a contract with `src/chat/ipc.ts`; the serialization tests in `commands.rs` and `local_model.rs` pin them.
 - `ask_text` captures the display under the cursor before it answers. A failed capture never fails the question: the answer comes text-only and `ScreenShare` tells the panel why.
 - `ask_text` asks through the managed `dot_agent::Session`, which remembers the conversation. A newer `ask_text`, `stop_answer` or `new_chat` ends the running one early with `Ok`, so the panel treats a resolved `ask_text` as the end of that answer, finished or not. `ask_text` takes its place as the running answer before the screenshot, so Stop or New chat during the capture ends it too. `Started` arrives only once the previous answer has stopped.
+- Saved chats: `saved_chats.rs` records through the managed `SavedChats`, which holds the open `dot_history::HistoryStore`. `ask_text` writes the question at `Thinking`, which dot-agent sends under its conversation lock, so `starts_conversation` decides a new saved chat in order with New chat; `new_chat` needs no saved-chat call. The answer text is written when the answer ends. A failed answer deletes the question and an empty one is deleted too, mirroring what dot-agent remembers; a chat emptied that way is never followed up, because dot-agent starts a new conversation then.
+- A recording error has nobody to show it to, so it closes the saved chats as unavailable with the reason; the History page shows it. History page errors return to the page instead.
+- History is on when `history.db` exists. At startup the app reads the key (`dot_settings::read_or_create_history_key`) only then, so a user who never turned History on gets no Keychain access. `use_macos_keychain()` runs first in setup.
+- `open_saved_chat` resumes the session before it makes the chat current, so a question racing the open is saved into the chat it was asked in.
+- The `HistoryStatus`, `SavedChatRow` and `SavedTurnRow` serde shapes are a contract with `src/chat/ipc.ts`; the tests in `saved_chats.rs` pin them.
 - `describe_answer_error` words `ProviderError` for the panel. A context overflow tells the user to click New chat.
 - The screenshot size is `Settings::default().screenshot_max_edge_px` until the settings file is loaded at startup (the settings window).
 - `build.rs` adds `-rpath /usr/lib/swift` for dot-screen's Swift bridge; without it the app aborts at launch on `libswift_Concurrency.dylib`.
@@ -30,7 +35,7 @@ Invariants and gotchas:
 - The window is transparent with the `sidebar` window effect, so `html` and `body` stay transparent and each page paints its own background. Transparency needs `app.macOSPrivateApi` plus the tauri `macos-private-api` feature; tauri-build fails when the two disagree, and the private API keeps Hey Dot out of the Mac App Store.
 - The title bar is an overlay: the page draws under the traffic lights. Only elements marked `data-tauri-drag-region` move the window, and that needs `core:window:allow-start-dragging` in `capabilities/default.json`.
 - The UI uses system fonts and bundled CSS only, so nothing is fetched at launch. `src/styles.css` holds the colour variables in `:root`, redefined for dark mode under `prefers-color-scheme`, and each UI module imports its own CSS file.
-- Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
+- Paths the app owns: models in `~/Library/Application Support/Hey Dot/models/`, saved chats in `~/Library/Application Support/Hey Dot/history.db`, llama-server log in `~/Library/Logs/Hey Dot/llama-server.log`.
 - Which local model runs is `pick_local_model(recommend(hardware))` until onboarding lets the user choose.
 
 Called by: the user (launching the app).

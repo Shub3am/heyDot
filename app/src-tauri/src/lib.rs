@@ -1,5 +1,7 @@
 mod commands;
+mod history_commands;
 mod local_model;
+mod saved_chats;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,6 +10,7 @@ use dot_models::{detect_hardware, recommend};
 use tauri::{Manager, RunEvent};
 
 use crate::local_model::{LocalModel, LocalModelPaths, pick_local_model};
+use crate::saved_chats::SavedChats;
 
 fn http_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
@@ -38,9 +41,15 @@ pub fn run() {
             };
             let model = pick_local_model(&recommend(&detect_hardware()));
             let local_model = Arc::new(LocalModel::new(model, paths, download_http));
+            dot_settings::use_macos_keychain()?;
+            let saved_chats = SavedChats::new(app.path().data_dir()?.join("Hey Dot/history.db"));
+            if saved_chats.file_exists() {
+                history_commands::unlock_saved_chats(&saved_chats);
+            }
             app.manage(local_model_http);
             app.manage(dot_agent::Session::default());
             app.manage(Arc::clone(&local_model));
+            app.manage(saved_chats);
             tauri::async_runtime::spawn(async move { local_model.start_if_installed().await });
             Ok(())
         })
@@ -50,7 +59,14 @@ pub fn run() {
             commands::ask_text,
             commands::stop_answer,
             commands::new_chat,
-            commands::open_screen_recording_settings
+            commands::open_screen_recording_settings,
+            history_commands::history_status,
+            history_commands::turn_on_history,
+            history_commands::set_history_saving,
+            history_commands::list_saved_chats,
+            history_commands::open_saved_chat,
+            history_commands::delete_saved_chat,
+            history_commands::delete_all_saved_chats
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

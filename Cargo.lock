@@ -1728,6 +1728,7 @@ name = "hey-dot"
 version = "0.1.0"
 dependencies = [
  "dot-agent",
+ "dot-history",
  "dot-models",
  "dot-providers",
  "dot-runtime",
