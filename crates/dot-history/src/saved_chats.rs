@@ -132,6 +132,16 @@ impl HistoryStore {
         Ok(turns)
     }
 
+    /// False once the chat was deleted, or emptied by `delete_turn`.
+    pub fn chat_exists(&self, chat: ChatId) -> Result<bool, HistoryError> {
+        let exists = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM chats WHERE id = ?1)",
+            [chat.0],
+            |row| row.get(0),
+        )?;
+        Ok(exists)
+    }
+
     pub fn delete_chat(&self, chat: ChatId) -> Result<(), HistoryError> {
         self.connection
             .execute("DELETE FROM chats WHERE id = ?1", [chat.0])?;
