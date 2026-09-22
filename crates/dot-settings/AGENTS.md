@@ -15,7 +15,7 @@ Invariants and gotchas:
 - `load_settings` and `save_settings` are blocking (the save waits on F_FULLFSYNC). An async caller runs them in `spawn_blocking`.
 - Hotkey strings use the global-hotkey format (`Alt+Space`); validation happens where the shortcut is registered.
 - API keys never go in `Settings`, the TOML, or any log line. Keychain service is `com.shub3am.heydot`, account is the provider id.
-- The saved-chats key is 64 hex characters (32 random bytes), account `history-database-key`. It is created on first read and never rotated: a new key makes every saved chat unreadable.
+- The saved-chats key is 64 hex characters (32 random bytes), account `history-database-key`. It is created on first read and never rotated: a new key makes every saved chat unreadable. Reads are serialized in-process so two first reads cannot create two keys; two processes racing the first read are not guarded.
 - The credential store is process-global: without `use_macos_keychain()` every key call fails. Tests set `keyring_core::mock::Store` once instead; the real Keychain path is not exercised by the tests.
 
 Called by: `app/src-tauri`, which reads `Settings::default()` for the screenshot size. The saved-chats key is read when History opens its database. Loading the settings file and the API keys come with the settings window.
