@@ -101,8 +101,9 @@ impl Recorder {
         if !store.is_saving()? {
             return Ok(None);
         }
+        // The page, or a stopped question emptying it, can delete the current chat between questions.
         let chat = match self.current_chat {
-            Some(chat) if !starts_conversation => chat,
+            Some(chat) if !starts_conversation && store.chat_exists(chat)? => chat,
             _ => store.start_chat()?,
         };
         self.current_chat = Some(chat);
@@ -253,25 +254,17 @@ impl SavedChats {
     }
 
     pub fn delete(&self, chat_id: i64) -> Result<(), String> {
-        let mut recorder = self.lock();
-        recorder
+        self.lock()
             .store()?
             .delete_chat(ChatId(chat_id))
-            .map_err(|error| error.to_string())?;
-        if recorder.current_chat == Some(ChatId(chat_id)) {
-            recorder.current_chat = None;
-        }
-        Ok(())
+            .map_err(|error| error.to_string())
     }
 
     pub fn delete_all(&self) -> Result<(), String> {
-        let mut recorder = self.lock();
-        recorder
+        self.lock()
             .store()?
             .delete_all_chats()
-            .map_err(|error| error.to_string())?;
-        recorder.current_chat = None;
-        Ok(())
+            .map_err(|error| error.to_string())
     }
 
     fn lock(&self) -> MutexGuard<'_, Recorder> {
@@ -442,6 +435,34 @@ mod tests {
             .unwrap();
         ask(&saved_chats, "Follow up", false);
 
+        assert_eq!(titles(&saved_chats), vec![("Follow up".to_owned(), 1)]);
+    }
+
+    #[test]
+    fn a_follow_up_after_a_stopped_question_emptied_its_new_chat_is_saved() {
+        let folder = tempfile::tempdir().unwrap();
+        let saved_chats = turned_on(&folder);
+        let stopped = saved_chats.record_question("Stopped", false, true).unwrap();
+        saved_chats.record_answer(stopped, "");
+
+        ask(&saved_chats, "Follow up", false);
+
+        assert_eq!(saved_chats.status(), HistoryStatus::On { saving: true });
+        assert_eq!(titles(&saved_chats), vec![("Follow up".to_owned(), 1)]);
+    }
+
+    #[test]
+    fn continuing_a_chat_deleted_meanwhile_sends_the_follow_up_to_a_new_chat() {
+        let folder = tempfile::tempdir().unwrap();
+        let saved_chats = turned_on(&folder);
+        ask(&saved_chats, "Deleted", true);
+        let deleted_chat = saved_chats.list("").unwrap()[0].id;
+        saved_chats.delete(deleted_chat).unwrap();
+
+        saved_chats.continue_chat(deleted_chat);
+        ask(&saved_chats, "Follow up", false);
+
+        assert_eq!(saved_chats.status(), HistoryStatus::On { saving: true });
         assert_eq!(titles(&saved_chats), vec![("Follow up".to_owned(), 1)]);
     }
 
