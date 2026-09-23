@@ -3,12 +3,14 @@ import type { Channel } from "@tauri-apps/api/core";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, expect, test, vi } from "vitest";
 import App from "./App";
-import type { AnswerEvent, LocalModelStatus } from "./chat/ipc";
+import type { AnswerEvent, LocalModelStatus, SavedTurnRow } from "./chat/ipc";
 
 type AskHandler = (onEvent: Channel<AnswerEvent>) => Promise<void>;
 
 let invokedCommands: string[] = [];
 let statusChannel: Channel<LocalModelStatus> | undefined;
+
+const savedTurns: SavedTurnRow[] = [{ question: "What city is this?", hadScreenshot: false, answer: "Paris." }];
 
 async function renderApp(onAsk: AskHandler = async () => {}) {
   mockIPC((command, args) => {
@@ -19,6 +21,15 @@ async function renderApp(onAsk: AskHandler = async () => {}) {
     }
     if (command === "ask_text") {
       return onAsk(namedArgs.onEvent as Channel<AnswerEvent>);
+    }
+    if (command === "history_status") {
+      return { kind: "on", saving: true };
+    }
+    if (command === "list_saved_chats") {
+      return [{ id: 7, title: "What city is this?", updatedAtMs: 0, turnCount: 1 }];
+    }
+    if (command === "open_saved_chat") {
+      return savedTurns;
     }
   });
   render(<App />);
@@ -119,6 +130,23 @@ test("an answer still streaming when New chat is clicked does not come back", as
   fireEvent.click(pageButton("New chat"));
   act(() => answerChannel.onmessage({ event: "delta", data: { text: "Par" } }));
   expect(screen.queryByText("Par")).toBeNull();
+  expect(screen.queryByRole("article")).toBeNull();
+});
+
+test("opening a saved chat shows its turns on the Chat page", async () => {
+  await renderApp();
+  fireEvent.click(pageButton("History"));
+  fireEvent.click(await screen.findByRole("button", { name: "Open" }));
+  expect(await screen.findByRole("heading", { name: "Chat" })).toBeTruthy();
+  expect(screen.getByRole("article").textContent).toContain("Paris.");
+});
+
+test("New chat after opening a saved chat shows an empty Chat", async () => {
+  await renderApp();
+  fireEvent.click(pageButton("History"));
+  fireEvent.click(await screen.findByRole("button", { name: "Open" }));
+  await screen.findByRole("article");
+  fireEvent.click(pageButton("New chat"));
   expect(screen.queryByRole("article")).toBeNull();
 });
 
