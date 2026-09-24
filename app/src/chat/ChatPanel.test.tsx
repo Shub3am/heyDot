@@ -3,7 +3,7 @@ import type { Channel } from "@tauri-apps/api/core";
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, expect, test } from "vitest";
 import ChatPanel from "./ChatPanel";
-import type { AnswerEvent, LocalModelPhase, LocalModelStatus } from "./ipc";
+import type { AnswerEvent, LocalModelPhase, LocalModelStatus, ScreenShare } from "./ipc";
 
 type AskHandler = (question: string, onEvent: Channel<AnswerEvent>) => Promise<void>;
 
@@ -34,6 +34,10 @@ function typeQuestion(text: string) {
 }
 
 const askButton = () => screen.getByRole("button", { name: "Ask" }) as HTMLButtonElement;
+
+function started(screenShare: ScreenShare, leavesDevice = false, host = "127.0.0.1"): AnswerEvent {
+  return { event: "started", data: { leavesDevice, host, screen: screenShare } };
+}
 
 afterEach(() => {
   cleanup();
@@ -89,7 +93,7 @@ test("ask stays disabled for a blank question", async () => {
 
 test("streams the answer under the question with an on-this-mac badge", async () => {
   await renderPanel(async (_question, onEvent) => {
-    onEvent.onmessage({ event: "started", data: { leavesDevice: false, host: "127.0.0.1" } });
+    onEvent.onmessage(started({ kind: "attached" }));
     onEvent.onmessage({ event: "delta", data: { text: "Par" } });
     onEvent.onmessage({ event: "delta", data: { text: "is" } });
   });
@@ -103,7 +107,7 @@ test("streams the answer under the question with an on-this-mac badge", async ()
 
 test("an answer that leaves the Mac names the host", async () => {
   await renderPanel(async (_question, onEvent) => {
-    onEvent.onmessage({ event: "started", data: { leavesDevice: true, host: "api.openai.com" } });
+    onEvent.onmessage(started({ kind: "attached" }, true, "api.openai.com"));
   });
   sendPhase({ kind: "ready" });
   typeQuestion("Hi");
@@ -140,4 +144,38 @@ test("ask stays disabled while an answer is streaming", async () => {
   fireEvent.click(askButton());
   typeQuestion("And of Spain?");
   expect(askButton().disabled).toBe(true);
+});
+
+test("an answer with a screenshot says so", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "attached" }));
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is on my screen?");
+  fireEvent.click(askButton());
+  expect(await screen.findByText("With a screenshot of this screen")).toBeTruthy();
+});
+
+test("a missing screen permission answers without a screenshot and offers the settings", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "permissionNeeded" }));
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is on my screen?");
+  fireEvent.click(askButton());
+  expect((await screen.findByRole("status")).textContent).toContain("needs Screen Recording permission");
+  fireEvent.click(screen.getByRole("button", { name: "Open Screen Recording settings" }));
+  await waitFor(() => expect(invokedCommands).toContain("open_screen_recording_settings"));
+});
+
+test("a failed screenshot says why the answer has none", async () => {
+  await renderPanel(async (_question, onEvent) => {
+    onEvent.onmessage(started({ kind: "failed", reason: "no display is under the mouse cursor" }));
+  });
+  sendPhase({ kind: "ready" });
+  typeQuestion("What is on my screen?");
+  fireEvent.click(askButton());
+  expect((await screen.findByRole("status")).textContent).toContain(
+    "Answered without a screenshot: no display is under the mouse cursor",
+  );
 });
