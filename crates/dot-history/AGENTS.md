@@ -4,7 +4,7 @@ Owns: the saved-chats file: an SQLCipher-encrypted SQLite database of chats and 
 
 Must not know about: the Keychain, the UI, dot-agent, models, or where the file lives. The caller passes the path and the key; the app uses `~/Library/Application Support/Hey Dot/history.db` and the key from `dot_settings::read_or_create_history_key`.
 
-Entry points: `HistoryStore::open(path, key_hex)`, then `start_chat`, `add_question`, `save_answer`, `delete_turn` to record; `list_chats(search)`, `load_chat`, `delete_chat`, `delete_all_chats` for the History page; `is_saving` and `set_saving`.
+Entry points: `HistoryStore::open(path, key_hex)`, then `start_chat`, `add_question`, `save_answer`, `delete_turn` to record; `chat_exists` before a follow-up joins a chat; `list_chats(search)`, `load_chat`, `delete_chat`, `delete_all_chats` for the History page; `is_saving` and `set_saving`.
 
 Invariants and gotchas:
 - Screenshots are never stored. A turn keeps only `had_screenshot`.
@@ -12,6 +12,7 @@ Invariants and gotchas:
 - A wrong key shows up on the first read as SQLITE_NOTADB and is returned as `WrongKey`. There is no recovery: a lost key means the chats are gone.
 - A question is written before its answer exists. A turn with an empty answer (the app quit mid-answer) is hidden from lists and loads, and a chat with no answered turn is not listed.
 - `save_answer` and `delete_turn` on a turn already deleted with its chat do nothing and succeed: the page can delete a chat while its answer is still running.
+- `delete_turn` deletes the chat too when it was the chat's last turn, so a caller holding a `ChatId` checks `chat_exists` before adding to it.
 - A chat's title and date are derived from its answered turns: the first question, and when the latest was asked. Nothing stores them separately.
 - Ids use AUTOINCREMENT so a deleted chat's id is never reused: the app and the page hold ids across deletes.
 - `secure_delete` is on, so deleted text is overwritten in the file.

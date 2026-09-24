@@ -158,6 +158,22 @@ fn a_turn_already_deleted_with_its_chat_is_ignored() {
 }
 
 #[test]
+fn a_chat_exists_until_it_is_deleted_or_emptied() {
+    let folder = tempfile::tempdir().unwrap();
+    let store = open_store(&folder);
+    let deleted = store.start_chat().unwrap();
+    let emptied = store.start_chat().unwrap();
+    let only_turn = store.add_question(emptied, "Stopped", false, 10).unwrap();
+    assert!(store.chat_exists(deleted).unwrap());
+
+    store.delete_chat(deleted).unwrap();
+    store.delete_turn(only_turn).unwrap();
+
+    assert!(!store.chat_exists(deleted).unwrap());
+    assert!(!store.chat_exists(emptied).unwrap());
+}
+
+#[test]
 fn deleting_a_turn_keeps_the_rest_of_its_chat() {
     let folder = tempfile::tempdir().unwrap();
     let store = open_store(&folder);
