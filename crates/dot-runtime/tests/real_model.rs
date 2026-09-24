@@ -2,6 +2,7 @@
 //! Ignored by default: it needs `scripts/build-llama-server.sh` run and the model downloaded
 //! (the app's Download button puts it where this test looks).
 
+use std::io::Cursor;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -12,9 +13,8 @@ use futures_util::StreamExt;
 
 const MODEL_LOAD_TIMEOUT: Duration = Duration::from_secs(120);
 
-#[tokio::test]
-#[ignore = "needs the built llama-server and the downloaded Qwen3-VL 4B model"]
-async fn the_real_4b_model_answers_a_typed_question() {
+/// The log folder is returned so it outlives the runtime that writes into it.
+async fn start_real_4b_model() -> (Runtime, ChatConfig, tempfile::TempDir) {
     let models_dir = std::env::home_dir()
         .unwrap()
         .join("Library/Application Support/Hey Dot/models");
@@ -54,14 +54,13 @@ async fn the_real_4b_model_answers_a_typed_question() {
         api_key: runtime.api_key().to_owned(),
         model: QWEN3_VL_4B.id.to_owned(),
     };
-    let question = [ChatMessage {
-        role: ChatRole::User,
-        text: "What is the capital of France? Answer in one word.".to_owned(),
-        jpeg_image: None,
-    }];
+    (runtime, config, log_folder)
+}
+
+async fn collect_answer(config: &ChatConfig, question: &[ChatMessage]) -> String {
     let asked_at = Instant::now();
     let http = reqwest::Client::new();
-    let mut answer_stream = std::pin::pin!(stream_chat(&http, &config, &question));
+    let mut answer_stream = std::pin::pin!(stream_chat(&http, config, question));
     let mut answer = String::new();
     while let Some(delta) = answer_stream.next().await {
         if answer.is_empty() {
@@ -70,7 +69,40 @@ async fn the_real_4b_model_answers_a_typed_question() {
         answer.push_str(&delta.unwrap());
     }
     eprintln!("whole answer after {:?}: {answer:?}", asked_at.elapsed());
+    answer
+}
+
+#[tokio::test]
+#[ignore = "needs the built llama-server and the downloaded Qwen3-VL 4B model"]
+async fn the_real_4b_model_answers_a_typed_question() {
+    let (runtime, config, _log_folder) = start_real_4b_model().await;
+    let question = [ChatMessage {
+        role: ChatRole::User,
+        text: "What is the capital of France? Answer in one word.".to_owned(),
+        jpeg_image: None,
+    }];
+    let answer = collect_answer(&config, &question).await;
     runtime.stop().await;
 
     assert!(answer.contains("Paris"), "{answer}");
+}
+
+#[tokio::test]
+#[ignore = "needs the built llama-server and the downloaded Qwen3-VL 4B model"]
+async fn the_real_4b_model_sees_an_attached_jpeg() {
+    let (runtime, config, _log_folder) = start_real_4b_model().await;
+    let red_square = image::RgbImage::from_pixel(64, 64, image::Rgb([220, 20, 20]));
+    let mut jpeg = Cursor::new(Vec::new());
+    red_square
+        .write_to(&mut jpeg, image::ImageFormat::Jpeg)
+        .unwrap();
+    let question = [ChatMessage {
+        role: ChatRole::User,
+        text: "What single color fills this image? Answer in one word.".to_owned(),
+        jpeg_image: Some(jpeg.into_inner()),
+    }];
+    let answer = collect_answer(&config, &question).await;
+    runtime.stop().await;
+
+    assert!(answer.to_lowercase().contains("red"), "{answer}");
 }

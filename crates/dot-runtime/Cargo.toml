@@ -22,5 +22,6 @@ url = "2.5.8"
 dot-models = { path = "../dot-models" }
 dot-providers = { path = "../dot-providers" }
 futures-util = "0.3.34"
+image = { version = "0.25.10", default-features = false, features = ["jpeg"] }
 tempfile = "3.27.0"
 tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
