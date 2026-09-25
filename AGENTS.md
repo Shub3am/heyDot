@@ -14,6 +14,7 @@ Local-first voice and screen assistant for macOS (Windows later). Rust core, Tau
 - `crates/dot-screen/`: screenshot of the display under the cursor, as JPEG. See `crates/dot-screen/AGENTS.md`.
 - `scripts/build-llama-server.sh`: builds the pinned llama-server the app bundles, plus its licenses.
 - `site/`: marketing landing page (Vite + React). `vercel.json` at the root turns off Vercel deploys on push. Independent of the app.
+- `assets/`: README screenshots and demo GIF of the app with example answers. Nothing loads them at runtime.
 - `hey_dot.py`, `requirements.txt`: hackathon prototype, kept until the app reaches parity, then deleted. Tag `v0-hackathon` preserves it.
 
 ## Run
