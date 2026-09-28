@@ -1,12 +1,18 @@
 //! The key that encrypts saved chats, kept in the OS credential store beside the API keys.
 //! Must not log, print or persist the key anywhere else; losing it makes every saved chat unreadable.
 
+use std::sync::Mutex;
+
 use crate::api_keys::{ApiKeyError, KEYCHAIN_SERVICE};
 
 const HISTORY_KEY_ACCOUNT: &str = "history-database-key";
 
+/// Without it, two first reads can each create a key; the file gets one and the Keychain keeps the other.
+static KEY_CREATION: Mutex<()> = Mutex::new(());
+
 /// 32 random bytes as 64 hex characters. The first call creates the key, every later call reads it.
 pub fn read_or_create_history_key() -> Result<String, ApiKeyError> {
+    let _one_caller_at_a_time = KEY_CREATION.lock().unwrap();
     let entry = keyring_core::Entry::new(KEYCHAIN_SERVICE, HISTORY_KEY_ACCOUNT)?;
     match entry.get_password() {
         Ok(history_key) => Ok(history_key),
